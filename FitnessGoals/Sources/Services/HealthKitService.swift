@@ -131,7 +131,7 @@ class HealthKitService: ObservableObject {
         let bpms = hrSamples
             .map { $0.quantity.doubleValue(for: HKUnit(from: "count/min")) }
             .sorted()
-        let idx = Int(Double(bpms.count - 1) * 0.95)
+        let idx = Int(Double(bpms.count - 1) * 0.99)
         return bpms[idx] * 1.03
     }
 

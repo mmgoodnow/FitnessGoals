@@ -9,6 +9,7 @@ class DashboardViewModel: ObservableObject {
     @Published var error: String?
     @Published var sport: SportType = .running
     @Published var yearlyGoalMiles: Double = 500
+    @Published var allTimeMaxHR: Double? = nil
 
     private let healthKit = HealthKitService()
     private let currentYear = Calendar.current.component(.year, from: Date())
@@ -50,8 +51,10 @@ class DashboardViewModel: ObservableObject {
             async let current = healthKit.fetchWorkouts(sport: sport, year: currentYear)
             let years = (currentYear - 4 ..< currentYear).map { $0 }
             async let historical = healthKit.fetchWorkoutsMultiYear(sport: sport, years: years)
+            async let maxHR = healthKit.fetchAllTimeMaxHeartRate()
             workouts = try await current
             historicalWorkouts = try await historical
+            allTimeMaxHR = try await maxHR
         } catch {
             self.error = error.localizedDescription
         }
@@ -237,11 +240,9 @@ class DashboardViewModel: ObservableObject {
 
     // MARK: - Max HR estimation
 
-    /// Highest avg HR seen across all years + 5% buffer (avg HR during effort < true max).
+    /// Peak instantaneous HR ever recorded, falling back to 190 if unavailable.
     var estimatedMaxHR: Double {
-        let allWorkouts = workouts + historicalWorkouts.values.flatMap { $0 }
-        let maxAvg = allWorkouts.compactMap { $0.avgHeartRate }.max() ?? 190
-        return maxAvg * 1.05
+        allTimeMaxHR ?? 190
     }
 
     // MARK: - Year-over-year pace analysis

@@ -85,6 +85,23 @@ class HealthKitService: ObservableObject {
         }
     }
 
+    /// Queries the peak instantaneous heart rate sample ever recorded.
+    func fetchAllTimeMaxHeartRate() async throws -> Double? {
+        let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsQuery(
+                quantityType: hrType,
+                quantitySamplePredicate: nil,  // all time
+                options: .discreteMax
+            ) { _, stats, error in
+                if let error { continuation.resume(throwing: error); return }
+                let bpm = stats?.maximumQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
+                continuation.resume(returning: bpm)
+            }
+            store.execute(query)
+        }
+    }
+
     func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {
         var result: [Int: [Workout]] = [:]
         for year in years {

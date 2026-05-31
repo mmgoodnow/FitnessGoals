@@ -248,9 +248,10 @@ class HealthKitService: ObservableObject {
                 let windowDist = cumDist[right] - cumDist[left]
                 if windowDist > 0 {
                     let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
+                    guard windowTime > 1 else { continue }  // skip zero/negative timestamps
                     // Scale to exact target distance
                     let scaledTime = windowTime * (targetDist / windowDist)
-                    if scaledTime < best { best = scaledTime }
+                    if scaledTime > 1 && scaledTime < best { best = scaledTime }
                 }
             }
             if best < .infinity { results[targetDist] = best }

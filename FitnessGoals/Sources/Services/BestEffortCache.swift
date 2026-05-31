@@ -25,8 +25,17 @@ final class BestEffortCache {
     }
 
     func store(splits: [String: Double], for workoutID: UUID) {
-        store[workoutID.uuidString] = splits
+        // Filter out zero/bogus times before caching
+        let clean = splits.filter { $0.value > 1 }
+        store[workoutID.uuidString] = clean
         save()
+    }
+
+    /// Remove cache entries that contain any zero times (from a previous buggy fetch).
+    func purgeZeroEntries() {
+        let before = store.count
+        store = store.filter { _, splits in splits.values.allSatisfy { $0 > 1 } }
+        if store.count != before { save() }
     }
 
     // MARK: - Persistence

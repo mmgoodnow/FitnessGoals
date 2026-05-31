@@ -271,7 +271,9 @@ class DashboardViewModel: ObservableObject {
     }
 
     static let bestEffortDistances: [BestEffortDistance] = [
-        .init(id: "1mi",   label: "1 mi",        meters: 1609.34),
+        .init(id: "400m",  label: "400m",         meters: 400),
+        .init(id: "800m",  label: "800m",         meters: 800),
+        .init(id: "1mi",   label: "1 mi",         meters: 1609.34),
         .init(id: "5k",    label: "5K",           meters: 5000),
         .init(id: "10k",   label: "10K",          meters: 10000),
         .init(id: "half",  label: "Half Marathon", meters: 21097.5),
@@ -299,12 +301,13 @@ class DashboardViewModel: ObservableObject {
     func loadBestEfforts() async {
         guard sport == .running else { return }
         let allWorkouts = (historicalWorkouts.values.flatMap { $0 } + workouts)
-            .filter { $0.distance > Self.bestEffortDistances[0].meters }  // at least 1 mile
+            .filter { $0.distance >= Self.bestEffortDistances[0].meters }  // at least 400m
             .sorted { $0.startDate < $1.startDate }
         guard !allWorkouts.isEmpty else { return }
 
         bestEffortsLoading = true
         bestEffortsProgress = 0
+        cache.purgeZeroEntries()
 
         // We need the original HKWorkout objects for route queries — fetch them all at once
         let hkWorkouts = await fetchAllRunningHKWorkouts()

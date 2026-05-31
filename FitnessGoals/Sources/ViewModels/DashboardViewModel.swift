@@ -120,6 +120,13 @@ class DashboardViewModel: ObservableObject {
         return totalMiles / (Double(dayOfYear) / 7.0)
     }
 
+    /// Weekly mileage needed over the remaining weeks to finish exactly at goal.
+    var weeklyMilesNeeded: Double {
+        let weeksRemaining = Double(daysRemaining) / 7.0
+        guard weeksRemaining > 0 else { return 0 }
+        return max(yearlyGoalMiles - totalMiles, 0) / weeksRemaining
+    }
+
     // MARK: - Weekly chart data
 
     struct WeekPoint: Identifiable {

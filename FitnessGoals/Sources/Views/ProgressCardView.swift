@@ -50,38 +50,59 @@ struct ProgressCardView: View {
 
                 Divider()
 
-                // Stats grid
-                HStack(spacing: 0) {
-                    StatCell(label: "Ahead/Behind", value: String(format: "%+.1f mi", vm.milesAheadBehind), color: aheadColor)
-                    Divider().frame(height: 36)
-                    StatCell(label: "Req. Daily", value: String(format: "%.2f mi", vm.requiredDailyMiles))
-                    Divider().frame(height: 36)
-                    StatCell(label: "Wk Avg", value: String(format: "%.1f mi", vm.weeklyAverageMiles))
-                    Divider().frame(height: 36)
-                    StatCell(label: "Days Left", value: "\(vm.daysRemaining)")
+                // Pace rows
+                VStack(spacing: 10) {
+                    PaceRow(
+                        label: "YTD pace",
+                        weekly: vm.weeklyAverageMiles,
+                        annual: vm.weeklyAverageMiles * 52,
+                        deltaLabel: String(format: "%+.1f mi", vm.milesAheadBehind),
+                        deltaColor: aheadColor
+                    )
+                    Divider()
+                    PaceRow(
+                        label: "Needed to finish at goal",
+                        weekly: vm.weeklyMilesNeeded,
+                        annual: vm.yearlyGoalMiles,
+                        deltaLabel: nil,
+                        deltaColor: .primary
+                    )
                 }
             }
         }
     }
 }
 
-struct StatCell: View {
+struct PaceRow: View {
     let label: String
-    let value: String
-    var color: Color = .primary
+    let weekly: Double
+    let annual: Double
+    let deltaLabel: String?
+    let deltaColor: Color
 
     var body: some View {
-        VStack(spacing: 3) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(color)
-                .multilineTextAlignment(.center)
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(String(format: "%.1f mi/wk", weekly))
+                        .font(.subheadline.weight(.semibold))
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(String(format: "%.0f mi/yr", annual))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if let deltaLabel {
+                Text(deltaLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(deltaColor)
+            }
         }
-        .frame(maxWidth: .infinity)
     }
 }
 

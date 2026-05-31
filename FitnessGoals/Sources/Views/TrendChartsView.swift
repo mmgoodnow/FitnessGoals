@@ -26,6 +26,17 @@ private func cleanDomain(_ values: [Double], pad: Double = 0.10) -> ClosedRange<
     return (mn - span * pad) ... (mx + span * pad)
 }
 
+// Centered rolling average over `window` points (shrinks at edges)
+private func rollingAverage<T>(_ points: [T], window: Int, value: (T) -> Double) -> [Double] {
+    let half = window / 2
+    return points.indices.map { i in
+        let lo = max(0, i - half)
+        let hi = min(points.count - 1, i + half)
+        let slice = points[lo ... hi]
+        return slice.map(value).reduce(0, +) / Double(slice.count)
+    }
+}
+
 private func removeOutliers<T>(_ points: [T], value: (T) -> Double) -> [T] {
     guard points.count >= 4 else { return points }
     let vals = points.map(value).sorted()
@@ -65,6 +76,10 @@ struct PaceTrendView: View {
         points.map { ($0, -$0.paceMinPerMile!) }
     }
 
+    private var smoothedNegPace: [Double] {
+        rollingAverage(points, window: 20) { -$0.paceMinPerMile! }
+    }
+
     private var domain: ClosedRange<Double> {
         cleanDomain(points.map { -$0.paceMinPerMile! })
     }
@@ -76,21 +91,35 @@ struct PaceTrendView: View {
             if points.isEmpty {
                 Text("No data").font(.caption).foregroundStyle(.secondary)
             } else {
-                Chart(negatedPoints, id: \.point.id) { item in
-                    PointMark(
-                        x: .value("Date", item.point.date),
-                        y: .value("Min/mi", item.negPace)
-                    )
-                    .foregroundStyle(.orange.opacity(0.7))
-                    .symbolSize(30)
-
-                    if points.count > 1 {
-                        LineMark(
+                Chart {
+                    ForEach(negatedPoints, id: \.point.id) { item in
+                        PointMark(
                             x: .value("Date", item.point.date),
                             y: .value("Min/mi", item.negPace)
                         )
-                        .foregroundStyle(.orange.opacity(0.3))
-                        .interpolationMethod(.monotone)
+                        .foregroundStyle(.orange.opacity(lookback == .allTime ? 0.25 : 0.7))
+                        .symbolSize(lookback == .allTime ? 15 : 30)
+                    }
+                    if lookback == .thisYear && points.count > 1 {
+                        ForEach(negatedPoints, id: \.point.id) { item in
+                            LineMark(
+                                x: .value("Date", item.point.date),
+                                y: .value("Min/mi", item.negPace)
+                            )
+                            .foregroundStyle(.orange.opacity(0.3))
+                            .interpolationMethod(.monotone)
+                        }
+                    }
+                    if lookback == .allTime {
+                        ForEach(Array(zip(points, smoothedNegPace)), id: \.0.id) { pt, val in
+                            LineMark(
+                                x: .value("Date", pt.date),
+                                y: .value("Min/mi", val)
+                            )
+                            .foregroundStyle(.orange)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                        }
                     }
                 }
                 .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
@@ -146,6 +175,10 @@ struct HeartRateTrendView: View {
         return removeOutliers(raw) { $0.heartRate! }
     }
 
+    private var smoothedHR: [Double] {
+        rollingAverage(points, window: 20) { $0.heartRate! }
+    }
+
     private var domain: ClosedRange<Double> {
         cleanDomain(points.map { $0.heartRate! })
     }
@@ -157,21 +190,35 @@ struct HeartRateTrendView: View {
             if points.isEmpty {
                 Text("No heart rate data").font(.caption).foregroundStyle(.secondary)
             } else {
-                Chart(points) { p in
-                    PointMark(
-                        x: .value("Date", p.date),
-                        y: .value("BPM", p.heartRate!)
-                    )
-                    .foregroundStyle(.red.opacity(0.7))
-                    .symbolSize(30)
-
-                    if points.count > 1 {
-                        LineMark(
+                Chart {
+                    ForEach(points) { p in
+                        PointMark(
                             x: .value("Date", p.date),
                             y: .value("BPM", p.heartRate!)
                         )
-                        .foregroundStyle(.red.opacity(0.3))
-                        .interpolationMethod(.monotone)
+                        .foregroundStyle(.red.opacity(lookback == .allTime ? 0.25 : 0.7))
+                        .symbolSize(lookback == .allTime ? 15 : 30)
+                    }
+                    if lookback == .thisYear && points.count > 1 {
+                        ForEach(points) { p in
+                            LineMark(
+                                x: .value("Date", p.date),
+                                y: .value("BPM", p.heartRate!)
+                            )
+                            .foregroundStyle(.red.opacity(0.3))
+                            .interpolationMethod(.monotone)
+                        }
+                    }
+                    if lookback == .allTime {
+                        ForEach(Array(zip(points, smoothedHR)), id: \.0.id) { pt, val in
+                            LineMark(
+                                x: .value("Date", pt.date),
+                                y: .value("BPM", val)
+                            )
+                            .foregroundStyle(.red)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                        }
                     }
                 }
                 .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
@@ -223,6 +270,10 @@ struct VO2TrendView: View {
         return removeOutliers(raw) { $0.vo2! }
     }
 
+    private var smoothedVO2: [Double] {
+        rollingAverage(points, window: 20) { $0.vo2! }
+    }
+
     private var domain: ClosedRange<Double> {
         cleanDomain(points.map { $0.vo2! })
     }
@@ -234,25 +285,57 @@ struct VO2TrendView: View {
             if points.isEmpty {
                 Text("No data").font(.caption).foregroundStyle(.secondary)
             } else {
-                Chart(points) { p in
-                    AreaMark(
-                        x: .value("Date", p.date),
-                        yStart: .value("Base", domain.lowerBound),
-                        yEnd: .value("VO₂", p.vo2!)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(colors: [.purple.opacity(0.3), .purple.opacity(0.02)],
-                                       startPoint: .top, endPoint: .bottom)
-                    )
-                    .interpolationMethod(.monotone)
+                Chart {
+                    if lookback == .thisYear {
+                        ForEach(points) { p in
+                            AreaMark(
+                                x: .value("Date", p.date),
+                                yStart: .value("Base", domain.lowerBound),
+                                yEnd: .value("VO₂", p.vo2!)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(colors: [.purple.opacity(0.3), .purple.opacity(0.02)],
+                                               startPoint: .top, endPoint: .bottom)
+                            )
+                            .interpolationMethod(.monotone)
 
-                    LineMark(
-                        x: .value("Date", p.date),
-                        y: .value("VO₂", p.vo2!)
-                    )
-                    .foregroundStyle(.purple)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                    .interpolationMethod(.monotone)
+                            LineMark(
+                                x: .value("Date", p.date),
+                                y: .value("VO₂", p.vo2!)
+                            )
+                            .foregroundStyle(.purple)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                        }
+                    } else {
+                        ForEach(points) { p in
+                            PointMark(
+                                x: .value("Date", p.date),
+                                y: .value("VO₂", p.vo2!)
+                            )
+                            .foregroundStyle(.purple.opacity(0.25))
+                            .symbolSize(15)
+                        }
+                        ForEach(Array(zip(points, smoothedVO2)), id: \.0.id) { pt, val in
+                            AreaMark(
+                                x: .value("Date", pt.date),
+                                yStart: .value("Base", domain.lowerBound),
+                                yEnd: .value("VO₂", val)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(colors: [.purple.opacity(0.2), .purple.opacity(0.02)],
+                                               startPoint: .top, endPoint: .bottom)
+                            )
+                            .interpolationMethod(.monotone)
+                            LineMark(
+                                x: .value("Date", pt.date),
+                                y: .value("VO₂", val)
+                            )
+                            .foregroundStyle(.purple)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                        }
+                    }
                 }
                 .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
                 .chartYScale(domain: domain)

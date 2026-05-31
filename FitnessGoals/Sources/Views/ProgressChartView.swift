@@ -4,47 +4,82 @@ import Charts
 struct ProgressChartView: View {
     @EnvironmentObject var vm: DashboardViewModel
 
-    // Downsample to every 7th day for performance
-    var sampled: [DashboardViewModel.ProgressPoint] {
-        vm.progressData.filter { $0.day % 7 == 0 || $0.day == vm.dayOfYear }
+    // Actual points only (no nils), sampled every 3 days
+    private var actualPoints: [(day: Int, miles: Double)] {
+        vm.progressData
+            .compactMap { p -> (Int, Double)? in
+                guard let a = p.actual, p.day % 3 == 0 || p.day == vm.dayOfYear else { return nil }
+                return (p.day, a)
+            }
+    }
+
+    // Target sampled every 14 days + endpoints
+    private var targetPoints: [(day: Int, miles: Double)] {
+        vm.progressData
+            .filter { $0.day % 14 == 0 || $0.day == 1 || $0.day == vm.daysInYear }
+            .map { ($0.day, $0.target) }
     }
 
     var body: some View {
-        CardView(title: "Cumulative Progress") {
+        CardView(title: "Cumulative Progress", systemImage: "chart.line.uptrend.xyaxis", accentColor: .blue) {
             Chart {
-                ForEach(sampled) { point in
+                // Target line
+                ForEach(targetPoints, id: \.day) { point in
                     LineMark(
                         x: .value("Day", point.day),
-                        y: .value("Target", point.target)
+                        y: .value("Target", point.miles),
+                        series: .value("Series", "Target")
                     )
-                    .foregroundStyle(.gray.opacity(0.5))
-                    .lineStyle(StrokeStyle(dash: [4, 4]))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    .interpolationMethod(.linear)
+                }
 
-                    if let actual = point.actual {
-                        LineMark(
-                            x: .value("Day", point.day),
-                            y: .value("Actual", actual)
-                        )
-                        .foregroundStyle(.blue)
-                    }
+                // Actual area + line
+                ForEach(actualPoints, id: \.day) { point in
+                    AreaMark(
+                        x: .value("Day", point.day),
+                        y: .value("Miles", point.miles),
+                        series: .value("Series", "Actual")
+                    )
+                    .foregroundStyle(
+                        LinearGradient(colors: [.blue.opacity(0.25), .blue.opacity(0.02)],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                    .interpolationMethod(.monotone)
+
+                    LineMark(
+                        x: .value("Day", point.day),
+                        y: .value("Miles", point.miles),
+                        series: .value("Series", "Actual")
+                    )
+                    .foregroundStyle(.blue)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    .interpolationMethod(.monotone)
                 }
             }
+            .chartXScale(domain: 1 ... vm.daysInYear)
+            .chartYScale(domain: 0 ... vm.yearlyGoalMiles)
             .chartXAxis {
-                AxisMarks(values: [1, 91, 182, 274, 365]) { value in
+                AxisMarks(values: [1, 91, 182, 274, 365]) { val in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     AxisValueLabel {
-                        let labels = ["Jan", "Apr", "Jul", "Oct", "Dec"]
-                        let idx = [1, 91, 182, 274, 365].firstIndex(of: value.as(Int.self) ?? 0) ?? 0
-                        Text(labels[min(idx, labels.count - 1)])
+                        let map = [1: "Jan", 91: "Apr", 182: "Jul", 274: "Oct", 365: "Dec"]
+                        Text(map[val.as(Int.self) ?? 0] ?? "")
+                            .font(.caption2)
                     }
                 }
             }
             .chartYAxis {
-                AxisMarks { value in
-                    AxisValueLabel { Text("\(value.as(Int.self) ?? 0)") }
-                    AxisGridLine()
+                AxisMarks(position: .trailing) { val in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    AxisValueLabel {
+                        Text("\(val.as(Int.self) ?? 0)")
+                            .font(.caption2)
+                    }
                 }
             }
-            .frame(height: 200)
+            .frame(height: 180)
         }
     }
 }

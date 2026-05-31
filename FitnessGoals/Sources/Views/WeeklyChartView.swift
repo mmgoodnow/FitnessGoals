@@ -5,27 +5,34 @@ struct WeeklyChartView: View {
     @EnvironmentObject var vm: DashboardViewModel
 
     var body: some View {
-        CardView(title: "Weekly Distance") {
+        CardView(title: "Weekly Distance", systemImage: "calendar.badge.clock", accentColor: .indigo) {
             Chart(vm.weeklyData) { point in
                 BarMark(
                     x: .value("Week", point.week),
                     y: .value("Miles", point.miles)
                 )
-                .foregroundStyle(.blue.gradient)
-                .cornerRadius(2)
+                .foregroundStyle(
+                    LinearGradient(colors: [.indigo, .blue],
+                                   startPoint: .bottom, endPoint: .top)
+                )
+                .cornerRadius(3)
             }
             .chartXAxis {
-                AxisMarks(values: stride(from: 1, through: 52, by: 13).map { $0 }) { value in
+                AxisMarks(values: [1, 13, 26, 39, 52]) { val in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     AxisValueLabel {
-                        if let week = value.as(Int.self) {
-                            let labels = ["Jan", "Apr", "Jul", "Oct"]
-                            let idx = [1, 14, 27, 40].firstIndex(where: { week >= $0 }) ?? 0
-                            Text(labels[min(idx, 3)])
-                        }
+                        let map = [1: "Jan", 13: "Apr", 26: "Jul", 39: "Oct", 52: "Dec"]
+                        Text(map[val.as(Int.self) ?? 0] ?? "").font(.caption2)
                     }
                 }
             }
-            .frame(height: 180)
+            .chartYAxis {
+                AxisMarks(position: .trailing) { val in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    AxisValueLabel { Text("\(val.as(Int.self) ?? 0)").font(.caption2) }
+                }
+            }
+            .frame(height: 150)
         }
     }
 }

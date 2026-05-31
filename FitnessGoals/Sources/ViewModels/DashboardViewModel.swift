@@ -89,8 +89,7 @@ class DashboardViewModel: ObservableObject {
     }
 
     var daysInYear: Int {
-        let year = currentYear
-        let isLeap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+        let isLeap = (currentYear % 4 == 0 && currentYear % 100 != 0) || currentYear % 400 == 0
         return isLeap ? 366 : 365
     }
 
@@ -113,8 +112,7 @@ class DashboardViewModel: ObservableObject {
 
     var weeklyAverageMiles: Double {
         guard dayOfYear > 0 else { return 0 }
-        let weeksElapsed = Double(dayOfYear) / 7.0
-        return totalMiles / weeksElapsed
+        return totalMiles / (Double(dayOfYear) / 7.0)
     }
 
     // MARK: - Weekly chart data
@@ -172,8 +170,6 @@ class DashboardViewModel: ObservableObject {
     var weekdayData: [WeekdayPoint] {
         let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         var totals = [Double](repeating: 0, count: 7)
-        var counts = [Int](repeating: 0, count: 7)
-        // Count calendar weekdays elapsed in the year up to today
         var calendarCounts = [Int](repeating: 0, count: 7)
         let calendar = Calendar.current
         var yearStart = DateComponents()
@@ -184,17 +180,46 @@ class DashboardViewModel: ObservableObject {
             calendarCounts[Formatters.weekdayIndex(day)] += 1
         }
         for w in workouts {
-            let idx = Formatters.weekdayIndex(w.startDate)
-            totals[idx] += Formatters.miles(w.distance)
-            counts[idx] += 1
+            totals[Formatters.weekdayIndex(w.startDate)] += Formatters.miles(w.distance)
         }
         return (0..<7).map { i in
-            let avg = calendarCounts[i] > 0 ? totals[i] / Double(calendarCounts[i]) : 0
-            return WeekdayPoint(id: i, label: labels[i], avgMiles: avg)
+            WeekdayPoint(id: i, label: labels[i],
+                         avgMiles: calendarCounts[i] > 0 ? totals[i] / Double(calendarCounts[i]) : 0)
         }
     }
 
-    // MARK: - Pace analysis (multi-year)
+    // MARK: - Per-workout trend data (pace, HR, VO2)
+
+    struct WorkoutTrendPoint: Identifiable {
+        let id: UUID
+        let date: Date
+        let paceMinPerMile: Double?
+        let heartRate: Double?
+        let vo2: Double?
+    }
+
+    var workoutTrends: [WorkoutTrendPoint] {
+        workouts
+            .filter { $0.distance > 800 }  // skip very short efforts
+            .sorted { $0.startDate < $1.startDate }
+            .map { w in
+                let paceMinPerMile: Double?
+                if let spm = w.paceSecondsPerMeter {
+                    paceMinPerMile = spm * 1609.344 / 60.0
+                } else {
+                    paceMinPerMile = nil
+                }
+                return WorkoutTrendPoint(
+                    id: w.id,
+                    date: w.startDate,
+                    paceMinPerMile: paceMinPerMile,
+                    heartRate: w.avgHeartRate,
+                    vo2: w.estimatedVO2
+                )
+            }
+    }
+
+    // MARK: - Year-over-year pace analysis
 
     struct YearPacePoint: Identifiable {
         let id: Int
@@ -204,21 +229,18 @@ class DashboardViewModel: ObservableObject {
     }
 
     var paceAnalysisData: [YearPacePoint] {
-        var points: [YearPacePoint] = []
         let allYears = historicalWorkouts.keys.sorted() + [currentYear]
-        for year in allYears {
+        return allYears.map { year in
             let ws = year == currentYear ? workouts : (historicalWorkouts[year] ?? [])
             let filtered = ws.filter { $0.distance > 400 }
             let totalMeters = filtered.reduce(0.0) { $0 + $1.distance }
             let totalSeconds = filtered.reduce(0.0) { $0 + $1.duration }
-            let pace: Double? = totalMeters > 0 ? totalSeconds / totalMeters : nil
-            points.append(YearPacePoint(
+            return YearPacePoint(
                 id: year,
                 year: year,
-                avgPaceSecondsPerMeter: pace,
+                avgPaceSecondsPerMeter: totalMeters > 0 ? totalSeconds / totalMeters : nil,
                 totalMiles: Formatters.miles(totalMeters)
-            ))
+            )
         }
-        return points
     }
 }

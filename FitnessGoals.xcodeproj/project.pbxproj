@@ -26,6 +26,7 @@
 		A017 /* SportType.swift in Sources */ = {isa = PBXBuildFile; fileRef = F017 /* SportType.swift */; };
 		A018 /* GoalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F018 /* GoalSettings.swift */; };
 		A019 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F019 /* HealthKit.framework */; };
+		A020 /* TrendChartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F020 /* TrendChartsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 		F016 /* Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workout.swift; sourceTree = "<group>"; };
 		F017 /* SportType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportType.swift; sourceTree = "<group>"; };
 		F018 /* GoalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettings.swift; sourceTree = "<group>"; };
+		F020 /* TrendChartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartsView.swift; sourceTree = "<group>"; };
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 				F010 /* PaceAnalysisView.swift */,
 				F011 /* RecentWorkoutsView.swift */,
 				F012 /* CardView.swift */,
+				F020 /* TrendChartsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -251,6 +254,7 @@
 				A016 /* Workout.swift in Sources */,
 				A017 /* SportType.swift in Sources */,
 				A018 /* GoalSettings.swift in Sources */,
+				A020 /* TrendChartsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -333,7 +337,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FitnessGoals/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -416,7 +420,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FitnessGoals/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -62,9 +62,44 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Heart Rate") {
+                Section("Max Heart Rate") {
+                    let options: [(p: Double, label: String)] = [
+                        (0.99,   "p99"),
+                        (0.999,  "p99.9"),
+                        (0.9999, "p99.99"),
+                    ]
+                    ForEach(options, id: \.p) { opt in
+                        let result = vm.hrPercentiles[opt.p]
+                        Button {
+                            vm.setHRPercentile(opt.p)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(opt.label)
+                                        .foregroundStyle(.primary)
+                                    if let r = result {
+                                        Text("\(r.samplesAbove) samples above")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if let r = result {
+                                    Text(String(format: "%.0f bpm", r.bpm))
+                                        .foregroundStyle(.secondary)
+                                        .font(.subheadline)
+                                }
+                                if vm.selectedHRPercentile == opt.p {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("HR Zones") {
                     let maxHR = vm.estimatedMaxHR
-                    LabeledContent("Max HR (p99.9)", value: String(format: "%.0f bpm", maxHR))
                     ForEach(HRZone.allCases) { zone in
                         let range = zone.bpmRange(maxHR: maxHR)
                         HStack {

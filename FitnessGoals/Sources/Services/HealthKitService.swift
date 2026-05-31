@@ -85,11 +85,15 @@ class HealthKitService: ObservableObject {
         }
     }
 
-    /// Returns the 95th percentile instantaneous HR recorded during workouts, as a robust max HR estimate.
-    func fetchAllTimeMaxHeartRate() async throws -> Double? {
+    struct HRPercentileResult {
+        let bpm: Double      // value at this percentile × 1.03 fudge
+        let samplesAbove: Int  // number of raw samples above this percentile
+    }
+
+    /// Fetches all instantaneous HR samples during workouts and computes requested percentiles.
+    func fetchWorkoutHRPercentiles(_ percentiles: [Double]) async throws -> [Double: HRPercentileResult] {
         let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
 
-        // Fetch all running/cycling workouts ever to build date intervals
         let workoutSamples: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
@@ -105,9 +109,8 @@ class HealthKitService: ObservableObject {
             }
             store.execute(query)
         }
-        guard !workoutSamples.isEmpty else { return nil }
+        guard !workoutSamples.isEmpty else { return [:] }
 
-        // Build a predicate that matches HR samples falling inside any workout
         let workoutPredicate = NSCompoundPredicate(orPredicateWithSubpredicates:
             workoutSamples.map {
                 HKQuery.predicateForSamples(withStart: $0.startDate, end: $0.endDate, options: .strictStartDate)
@@ -126,13 +129,21 @@ class HealthKitService: ObservableObject {
             }
             store.execute(query)
         }
-        guard !hrSamples.isEmpty else { return nil }
+        guard !hrSamples.isEmpty else { return [:] }
 
         let bpms = hrSamples
             .map { $0.quantity.doubleValue(for: HKUnit(from: "count/min")) }
             .sorted()
-        let idx = Int(Double(bpms.count - 1) * 0.999)
-        return bpms[idx] * 1.03
+        let n = bpms.count
+
+        var result: [Double: HRPercentileResult] = [:]
+        for p in percentiles {
+            let idx = Int(Double(n - 1) * p)
+            let value = bpms[idx] * 1.03
+            let samplesAbove = n - 1 - idx
+            result[p] = HRPercentileResult(bpm: value, samplesAbove: samplesAbove)
+        }
+        return result
     }
 
     func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {

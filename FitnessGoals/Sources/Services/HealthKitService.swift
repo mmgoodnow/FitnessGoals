@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import CoreLocation
 
 @MainActor
 class HealthKitService: ObservableObject {
@@ -13,8 +14,34 @@ class HealthKitService: ObservableObject {
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
             HKObjectType.quantityType(forIdentifier: .distanceCycling)!,
             HKObjectType.quantityType(forIdentifier: .heartRate)!,
+            HKSeriesType.workoutRoute(),
         ]
         try await store.requestAuthorization(toShare: [], read: readTypes)
+    }
+
+    /// Returns raw HKWorkout objects (no HR enrichment) — used for route queries.
+    func fetchHKWorkouts(sport: SportType, year: Int) async throws -> [HKWorkout] {
+        let calendar = Calendar.current
+        var startComps = DateComponents()
+        startComps.year = year; startComps.month = 1; startComps.day = 1
+        let start = calendar.date(from: startComps)!
+        var endComps = DateComponents()
+        endComps.year = year + 1; endComps.month = 1; endComps.day = 1
+        let end = calendar.date(from: endComps)!
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForWorkouts(with: sport.hkWorkoutType),
+            HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
+        ])
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: .workoutType(), predicate: predicate,
+                limit: HKObjectQueryNoLimit, sortDescriptors: nil
+            ) { _, samples, error in
+                if let error { continuation.resume(throwing: error); return }
+                continuation.resume(returning: samples as? [HKWorkout] ?? [])
+            }
+            store.execute(query)
+        }
     }
 
     func fetchWorkouts(sport: SportType, year: Int) async throws -> [Workout] {
@@ -152,5 +179,82 @@ class HealthKitService: ObservableObject {
             result[year] = try await fetchWorkouts(sport: sport, year: year)
         }
         return result
+    }
+
+    // MARK: - Route-based best effort splits
+
+    /// Returns best split time (seconds) for each requested distance (meters),
+    /// computed by sliding a window along the GPS route.
+    /// Returns nil for distances the workout doesn't cover.
+    func fetchRouteSplits(
+        for hkWorkout: HKWorkout,
+        distances: [Double]
+    ) async throws -> [Double: TimeInterval] {
+        // 1. Find the workout route
+        let routeType = HKSeriesType.workoutRoute()
+        let routeSamples: [HKWorkoutRoute] = try await withCheckedThrowingContinuation { continuation in
+            let pred = HKQuery.predicateForObjects(from: hkWorkout)
+            let query = HKSampleQuery(
+                sampleType: routeType,
+                predicate: pred,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if let error { continuation.resume(throwing: error); return }
+                continuation.resume(returning: samples as? [HKWorkoutRoute] ?? [])
+            }
+            store.execute(query)
+        }
+        guard let route = routeSamples.first else { return [:] }
+
+        // 2. Stream all CLLocation points from the route
+        var locations: [CLLocation] = []
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let query = HKWorkoutRouteQuery(route: route) { _, newLocations, done, error in
+                if let error { continuation.resume(throwing: error); return }
+                if let newLocations { locations.append(contentsOf: newLocations) }
+                if done { continuation.resume() }
+            }
+            store.execute(query)
+        }
+        guard locations.count >= 2 else { return [:] }
+
+        // Sort by timestamp (should already be sorted, but be safe)
+        locations.sort { $0.timestamp < $1.timestamp }
+
+        // 3. Sliding window: for each target distance find the fastest window
+        return bestSplits(locations: locations, distances: distances)
+    }
+
+    /// Pure computation — walks locations with a two-pointer sliding window.
+    private func bestSplits(locations: [CLLocation], distances: [Double]) -> [Double: TimeInterval] {
+        // Build cumulative distance array
+        var cumDist = [Double](repeating: 0, count: locations.count)
+        for i in 1 ..< locations.count {
+            cumDist[i] = cumDist[i - 1] + locations[i].distance(from: locations[i - 1])
+        }
+        let totalDist = cumDist.last ?? 0
+
+        var results: [Double: TimeInterval] = [:]
+        for targetDist in distances {
+            guard totalDist >= targetDist else { continue }
+            var best: TimeInterval = .infinity
+            var left = 0
+            for right in 1 ..< locations.count {
+                // Advance left until window is just under targetDist
+                while cumDist[right] - cumDist[left] > targetDist {
+                    left += 1
+                }
+                let windowDist = cumDist[right] - cumDist[left]
+                if windowDist > 0 {
+                    let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
+                    // Scale to exact target distance
+                    let scaledTime = windowTime * (targetDist / windowDist)
+                    if scaledTime < best { best = scaledTime }
+                }
+            }
+            if best < .infinity { results[targetDist] = best }
+        }
+        return results
     }
 }

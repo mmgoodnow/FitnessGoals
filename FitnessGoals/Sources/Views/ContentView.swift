@@ -4,7 +4,7 @@ struct ContentView: View {
     @StateObject private var vm = DashboardViewModel()
 
     var body: some View {
-        NavigationStack {
+        Group {
             if vm.isLoading && vm.workouts.isEmpty {
                 ProgressView("Loading workouts…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -20,8 +20,23 @@ struct ContentView: View {
                 }
                 .padding()
             } else {
-                DashboardView()
-                    .environmentObject(vm)
+                TabView {
+                    NavigationStack {
+                        DashboardView()
+                            .environmentObject(vm)
+                    }
+                    .tabItem {
+                        Label("Dashboard", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+
+                    NavigationStack {
+                        RecordsView()
+                            .environmentObject(vm)
+                    }
+                    .tabItem {
+                        Label("Records", systemImage: "trophy.fill")
+                    }
+                }
             }
         }
         .task { await vm.load() }

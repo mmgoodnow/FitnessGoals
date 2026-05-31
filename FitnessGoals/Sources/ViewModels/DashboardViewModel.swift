@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import HealthKit
 
 @MainActor
 class DashboardViewModel: ObservableObject {
@@ -11,6 +12,16 @@ class DashboardViewModel: ObservableObject {
     @Published var yearlyGoalMiles: Double = 500
     @Published var hrPercentiles: [Double: HealthKitService.HRPercentileResult] = [:]
     @Published var selectedHRPercentile: Double = 0.999
+
+    // Best efforts
+    @Published var bestEffortsLoading = false
+    @Published var bestEffortsProgress: Double = 0   // 0–1
+    // [distanceID: BestEffort]
+    @Published var bestEffortsByDistance: [String: BestEffort] = [:]
+    // [distanceID: [BestEffortPoint]] sorted by date
+    @Published var bestEffortProgressions: [String: [BestEffortPoint]] = [:]
+
+    private let cache = BestEffortCache.shared
 
     private let healthKit = HealthKitService()
     private let currentYear = Calendar.current.component(.year, from: Date())
@@ -61,6 +72,7 @@ class DashboardViewModel: ObservableObject {
             self.error = error.localizedDescription
         }
         isLoading = false
+        Task { await loadBestEfforts() }
     }
 
     func changeSport(_ newSport: SportType) {
@@ -270,29 +282,9 @@ class DashboardViewModel: ObservableObject {
         let id: String          // distance id
         let label: String
         let meters: Double
-        let time: TimeInterval  // estimated finish time at avg pace
+        let time: TimeInterval  // actual split time from GPS route
         let date: Date
         let workoutID: UUID
-    }
-
-    /// All-time best effort (fastest avg pace) for each standard distance,
-    /// using workouts that are at least that distance.
-    var bestEfforts: [BestEffort] {
-        let all = (historicalWorkouts.values.flatMap { $0 } + workouts)
-            .filter { $0.paceSecondsPerMeter != nil }
-        return Self.bestEffortDistances.compactMap { dist in
-            let candidates = all.filter { $0.distance >= dist.meters }
-            guard let best = candidates.min(by: { $0.paceSecondsPerMeter! < $1.paceSecondsPerMeter! }),
-                  let pace = best.paceSecondsPerMeter else { return nil }
-            return BestEffort(
-                id: dist.id,
-                label: dist.label,
-                meters: dist.meters,
-                time: pace * dist.meters,
-                date: best.startDate,
-                workoutID: best.id
-            )
-        }
     }
 
     struct BestEffortPoint: Identifiable {
@@ -302,19 +294,103 @@ class DashboardViewModel: ObservableObject {
         let isBest: Bool    // true if this is the all-time best at time of workout
     }
 
-    /// Progression of best efforts over time for a given distance.
-    func bestEffortProgression(for distanceID: String) -> [BestEffortPoint] {
-        guard let dist = Self.bestEffortDistances.first(where: { $0.id == distanceID }) else { return [] }
-        let all = (historicalWorkouts.values.flatMap { $0 } + workouts)
-            .filter { $0.distance >= dist.meters && $0.paceSecondsPerMeter != nil }
+    /// Fetch route splits for all workouts, using cache where available.
+    /// Updates bestEffortsByDistance and bestEffortProgressions as it goes.
+    func loadBestEfforts() async {
+        guard sport == .running else { return }
+        let allWorkouts = (historicalWorkouts.values.flatMap { $0 } + workouts)
+            .filter { $0.distance > Self.bestEffortDistances[0].meters }  // at least 1 mile
             .sorted { $0.startDate < $1.startDate }
-        var best: Double = .infinity
-        return all.map { w in
-            let t = w.paceSecondsPerMeter! * dist.meters
-            let isBest = t < best
-            if isBest { best = t }
-            return BestEffortPoint(id: w.id, date: w.startDate, time: t, isBest: isBest)
+        guard !allWorkouts.isEmpty else { return }
+
+        bestEffortsLoading = true
+        bestEffortsProgress = 0
+
+        // We need the original HKWorkout objects for route queries — fetch them all at once
+        let hkWorkouts = await fetchAllRunningHKWorkouts()
+        let hkByID = Dictionary(uniqueKeysWithValues: hkWorkouts.map { ($0.uuid, $0) })
+
+        let targetDistances = Self.bestEffortDistances.map { $0.meters }
+        // [workoutID: [meters: seconds]]
+        var allSplits: [UUID: [Double: TimeInterval]] = [:]
+
+        let uncached = allWorkouts.filter { !cache.hasCached($0.id) }
+        let total = uncached.count
+
+        // Fetch uncached workouts concurrently (cap concurrency to avoid hammering HealthKit)
+        await withTaskGroup(of: (UUID, [Double: TimeInterval]).self) { group in
+            var inFlight = 0
+            var iter = uncached.makeIterator()
+
+            func launchNext() {
+                guard let w = iter.next(), let hk = hkByID[w.id] else { return }
+                inFlight += 1
+                group.addTask {
+                    let splits = (try? await self.healthKit.fetchRouteSplits(for: hk, distances: targetDistances)) ?? [:]
+                    return (w.id, splits)
+                }
+            }
+
+            // Seed with up to 4 concurrent tasks
+            for _ in 0 ..< min(4, uncached.count) { launchNext() }
+
+            var completed = 0
+            for await (id, splits) in group {
+                cache.store(splits: splits.mapKeys { String($0) }, for: id)
+                allSplits[id] = splits
+                completed += 1
+                bestEffortsProgress = Double(completed) / Double(max(total, 1))
+                inFlight -= 1
+                launchNext()
+            }
         }
+
+        // Merge cached results for workouts we skipped
+        for w in allWorkouts {
+            if allSplits[w.id] == nil,
+               let cached = cache.splits(for: w.id) {
+                allSplits[w.id] = cached.compactMapKeys { Double($0) }
+            }
+        }
+
+        // Build progressions and best efforts
+        var progressions: [String: [BestEffortPoint]] = [:]
+        var bests: [String: BestEffort] = [:]
+
+        for dist in Self.bestEffortDistances {
+            var runningBest: TimeInterval = .infinity
+            var points: [BestEffortPoint] = []
+
+            for w in allWorkouts {
+                guard let t = allSplits[w.id]?[dist.meters] else { continue }
+                let isBest = t < runningBest
+                if isBest {
+                    runningBest = t
+                    bests[dist.id] = BestEffort(
+                        id: dist.id, label: dist.label, meters: dist.meters,
+                        time: t, date: w.startDate, workoutID: w.id
+                    )
+                }
+                points.append(BestEffortPoint(id: w.id, date: w.startDate, time: t, isBest: isBest))
+            }
+            progressions[dist.id] = points
+        }
+
+        bestEffortsByDistance = bests
+        bestEffortProgressions = progressions
+        bestEffortsLoading = false
+        bestEffortsProgress = 1
+    }
+
+    private func fetchAllRunningHKWorkouts() async -> [HKWorkout] {
+        // Use the already-fetched years range: historical + current
+        let years = Array((currentYear - 4) ... currentYear)
+        var result: [HKWorkout] = []
+        for year in years {
+            let ws = (try? await healthKit.fetchHKWorkouts(sport: .running, year: year)) ?? []
+            result.append(contentsOf: ws)
+        }
+        return result
     }
 
     // MARK: - Most recent workout
@@ -387,5 +463,19 @@ class DashboardViewModel: ObservableObject {
                 totalMiles: Formatters.miles(totalMeters)
             )
         }
+    }
+}
+
+private extension Dictionary {
+    func mapKeys<T: Hashable>(_ transform: (Key) -> T) -> [T: Value] {
+        Dictionary<T, Value>(uniqueKeysWithValues: map { (transform($0.key), $0.value) })
+    }
+
+    func compactMapKeys<T: Hashable>(_ transform: (Key) -> T?) -> [T: Value] {
+        var result: [T: Value] = [:]
+        for (k, v) in self {
+            if let newKey = transform(k) { result[newKey] = v }
+        }
+        return result
     }
 }

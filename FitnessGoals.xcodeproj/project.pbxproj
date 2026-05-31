@@ -31,6 +31,8 @@
 		A022 /* RecentWorkoutHighlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F022 /* RecentWorkoutHighlightView.swift */; };
 		A023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F023 /* SettingsView.swift */; };
 		A024 /* BestEffortsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F024 /* BestEffortsView.swift */; };
+		A025 /* RecordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F025 /* RecordsView.swift */; };
+		A026 /* BestEffortCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F026 /* BestEffortCache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +59,8 @@
 		F022 /* RecentWorkoutHighlightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWorkoutHighlightView.swift; sourceTree = "<group>"; };
 		F023 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F024 /* BestEffortsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestEffortsView.swift; sourceTree = "<group>"; };
+		F025 /* RecordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordsView.swift; sourceTree = "<group>"; };
+		F026 /* BestEffortCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestEffortCache.swift; sourceTree = "<group>"; };
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
@@ -146,6 +150,7 @@
 			children = (
 				F014 /* HealthKitService.swift */,
 				F015 /* Formatters.swift */,
+				F026 /* BestEffortCache.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -168,6 +173,7 @@
 				F022 /* RecentWorkoutHighlightView.swift */,
 				F023 /* SettingsView.swift */,
 				F024 /* BestEffortsView.swift */,
+				F025 /* RecordsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -271,6 +277,8 @@
 				A022 /* RecentWorkoutHighlightView.swift in Sources */,
 				A023 /* SettingsView.swift in Sources */,
 				A024 /* BestEffortsView.swift in Sources */,
+				A025 /* RecordsView.swift in Sources */,
+				A026 /* BestEffortCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

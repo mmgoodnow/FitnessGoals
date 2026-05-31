@@ -64,7 +64,7 @@ struct SettingsView: View {
 
                 Section("Heart Rate") {
                     let maxHR = vm.estimatedMaxHR
-                    LabeledContent("Max HR (p99)", value: String(format: "%.0f bpm", maxHR))
+                    LabeledContent("Max HR (p99.5)", value: String(format: "%.0f bpm", maxHR))
                     ForEach(HRZone.allCases) { zone in
                         let range = zone.bpmRange(maxHR: maxHR)
                         HStack {

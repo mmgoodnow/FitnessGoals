@@ -18,7 +18,7 @@ struct WeeklyChartView: View {
                 )
                 .cornerRadius(3)
             }
-            .allowsHitTesting(false)
+            .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
             .chartXScale(domain: 1 ... 52)
             .chartXAxis {
                 AxisMarks(values: [1, 13, 26, 39, 52]) { val in

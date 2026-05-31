@@ -58,7 +58,7 @@ struct ProgressChartView: View {
                     .interpolationMethod(.monotone)
                 }
             }
-            .allowsHitTesting(false)
+            .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
             .chartXScale(domain: 1 ... vm.daysInYear)
             .chartYScale(domain: 0 ... vm.yearlyGoalMiles)
             .chartXAxis {

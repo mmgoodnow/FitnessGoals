@@ -17,7 +17,7 @@ struct WeekdayFrequencyChartView: View {
                 )
                 .cornerRadius(4)
             }
-            .allowsHitTesting(false)
+            .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
             .chartYAxis {
                 AxisMarks(position: .trailing) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -47,7 +47,7 @@ struct WeekdayDistanceChartView: View {
                 )
                 .cornerRadius(4)
             }
-            .allowsHitTesting(false)
+            .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
             .chartYAxis {
                 AxisMarks(position: .trailing) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))

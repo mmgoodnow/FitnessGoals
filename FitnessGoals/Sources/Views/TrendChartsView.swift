@@ -73,7 +73,7 @@ struct PaceTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
-                .allowsHitTesting(false)
+                .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
@@ -135,7 +135,7 @@ struct HeartRateTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
-                .allowsHitTesting(false)
+                .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
@@ -195,7 +195,7 @@ struct VO2TrendView: View {
                     .lineStyle(StrokeStyle(lineWidth: 2))
                     .interpolationMethod(.monotone)
                 }
-                .allowsHitTesting(false)
+                .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in

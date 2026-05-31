@@ -1,12 +1,49 @@
 import SwiftUI
 import Charts
 
+// IQR-based outlier removal + domain padding
+private func cleanDomain(_ values: [Double], reversed: Bool = false, pad: Double = 0.10) -> ClosedRange<Double> {
+    guard values.count >= 2 else {
+        let v = values.first ?? 0
+        return (v * 0.9) ... (v * 1.1)
+    }
+    let sorted = values.sorted()
+    let q1 = sorted[sorted.count / 4]
+    let q3 = sorted[sorted.count * 3 / 4]
+    let iqr = q3 - q1
+    let lo = q1 - 1.5 * iqr
+    let hi = q3 + 1.5 * iqr
+    let inliers = values.filter { $0 >= lo && $0 <= hi }
+    let mn = (inliers.min() ?? sorted.first!)
+    let mx = (inliers.max() ?? sorted.last!)
+    let span = max(mx - mn, 1)
+    return reversed
+        ? (mn - span * pad) ... (mx + span * pad)  // will be reversed by chartYScale
+        : (mn - span * pad) ... (mx + span * pad)
+}
+
+private func removeOutliers<T>(_ points: [T], value: (T) -> Double) -> [T] {
+    guard points.count >= 4 else { return points }
+    let vals = points.map(value).sorted()
+    let q1 = vals[vals.count / 4]
+    let q3 = vals[vals.count * 3 / 4]
+    let iqr = q3 - q1
+    let lo = q1 - 1.5 * iqr
+    let hi = q3 + 1.5 * iqr
+    return points.filter { value($0) >= lo && value($0) <= hi }
+}
+
 // Pace over time (this year, per workout)
 struct PaceTrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        vm.workoutTrends.filter { $0.paceMinPerMile != nil }
+        let raw = vm.workoutTrends.filter { $0.paceMinPerMile != nil }
+        return removeOutliers(raw) { $0.paceMinPerMile! }
+    }
+
+    private var domain: ClosedRange<Double> {
+        cleanDomain(points.map { $0.paceMinPerMile! }, reversed: true)
     }
 
     var body: some View {
@@ -31,6 +68,7 @@ struct PaceTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
+                .chartYScale(domain: domain.upperBound ... domain.lowerBound)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -42,12 +80,10 @@ struct PaceTrendView: View {
                         }
                     }
                 }
-                .chartYScale(domain: .automatic(reversed: true))
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .month, count: 2)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
-                            .font(.caption2)
+                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
                 .frame(height: 160)
@@ -61,7 +97,12 @@ struct HeartRateTrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        vm.workoutTrends.filter { $0.heartRate != nil }
+        let raw = vm.workoutTrends.filter { $0.heartRate != nil }
+        return removeOutliers(raw) { $0.heartRate! }
+    }
+
+    private var domain: ClosedRange<Double> {
+        cleanDomain(points.map { $0.heartRate! })
     }
 
     var body: some View {
@@ -86,19 +127,19 @@ struct HeartRateTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
+                .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         AxisValueLabel {
-                            Text("\(val.as(Int.self) ?? 0) bpm").font(.caption2)
+                            Text("\(val.as(Int.self) ?? 0)").font(.caption2)
                         }
                     }
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .month, count: 2)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
-                            .font(.caption2)
+                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
                 .frame(height: 160)
@@ -112,7 +153,12 @@ struct VO2TrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        vm.workoutTrends.filter { $0.vo2 != nil }
+        let raw = vm.workoutTrends.filter { $0.vo2 != nil }
+        return removeOutliers(raw) { $0.vo2! }
+    }
+
+    private var domain: ClosedRange<Double> {
+        cleanDomain(points.map { $0.vo2! })
     }
 
     var body: some View {
@@ -139,6 +185,7 @@ struct VO2TrendView: View {
                     .lineStyle(StrokeStyle(lineWidth: 2))
                     .interpolationMethod(.monotone)
                 }
+                .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -150,8 +197,7 @@ struct VO2TrendView: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .month, count: 2)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
-                            .font(.caption2)
+                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
                 .frame(height: 160)

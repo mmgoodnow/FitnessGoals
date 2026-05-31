@@ -9,7 +9,8 @@ struct WeeklyChartView: View {
             Chart(vm.weeklyData) { point in
                 BarMark(
                     x: .value("Week", point.week),
-                    y: .value("Miles", point.miles)
+                    y: .value("Miles", point.miles),
+                    width: 4
                 )
                 .foregroundStyle(
                     LinearGradient(colors: [.indigo, .blue],
@@ -17,6 +18,7 @@ struct WeeklyChartView: View {
                 )
                 .cornerRadius(3)
             }
+            .chartXScale(domain: 1 ... 52)
             .chartXAxis {
                 AxisMarks(values: [1, 13, 26, 39, 52]) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))

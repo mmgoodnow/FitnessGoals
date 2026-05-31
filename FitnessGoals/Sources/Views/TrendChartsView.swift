@@ -73,6 +73,7 @@ struct PaceTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
+                .allowsHitTesting(false)
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
@@ -93,7 +94,7 @@ struct PaceTrendView: View {
                         AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
-                .frame(height: 160)
+                .frame(height: 160).clipped()
             }
         }
     }
@@ -134,6 +135,7 @@ struct HeartRateTrendView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
+                .allowsHitTesting(false)
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
@@ -149,7 +151,7 @@ struct HeartRateTrendView: View {
                         AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
-                .frame(height: 160)
+                .frame(height: 160).clipped()
             }
         }
     }
@@ -193,6 +195,7 @@ struct VO2TrendView: View {
                     .lineStyle(StrokeStyle(lineWidth: 2))
                     .interpolationMethod(.monotone)
                 }
+                .allowsHitTesting(false)
                 .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
@@ -208,7 +211,7 @@ struct VO2TrendView: View {
                         AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
                     }
                 }
-                .frame(height: 160)
+                .frame(height: 160).clipped()
 
                 Text("Estimated from pace via ACSM equation (ml/kg/min)")
                     .font(.caption2)

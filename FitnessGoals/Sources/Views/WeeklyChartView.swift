@@ -18,6 +18,7 @@ struct WeeklyChartView: View {
                 )
                 .cornerRadius(3)
             }
+            .allowsHitTesting(false)
             .chartXScale(domain: 1 ... 52)
             .chartXAxis {
                 AxisMarks(values: [1, 13, 26, 39, 52]) { val in
@@ -34,7 +35,7 @@ struct WeeklyChartView: View {
                     AxisValueLabel { Text("\(val.as(Int.self) ?? 0)").font(.caption2) }
                 }
             }
-            .frame(height: 150)
+            .frame(height: 150).clipped()
         }
     }
 }

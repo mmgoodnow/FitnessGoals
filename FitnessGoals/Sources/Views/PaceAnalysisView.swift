@@ -119,8 +119,8 @@ struct PaceAnalysisView: View {
                             }
                         }
                     }
-                    .chartXSelection(value: .constant(nil as String?))
-                    .frame(height: 180)
+                    
+                    .frame(height: 180).clipped()
                 }
             }
         }

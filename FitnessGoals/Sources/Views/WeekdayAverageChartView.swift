@@ -17,6 +17,7 @@ struct WeekdayFrequencyChartView: View {
                 )
                 .cornerRadius(4)
             }
+            .allowsHitTesting(false)
             .chartYAxis {
                 AxisMarks(position: .trailing) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -25,8 +26,7 @@ struct WeekdayFrequencyChartView: View {
                     }
                 }
             }
-            .chartXSelection(value: .constant(nil as String?))
-            .frame(height: 140)
+            .frame(height: 140).clipped()
         }
     }
 }
@@ -47,6 +47,7 @@ struct WeekdayDistanceChartView: View {
                 )
                 .cornerRadius(4)
             }
+            .allowsHitTesting(false)
             .chartYAxis {
                 AxisMarks(position: .trailing) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -55,8 +56,7 @@ struct WeekdayDistanceChartView: View {
                     }
                 }
             }
-            .chartXSelection(value: .constant(nil as String?))
-            .frame(height: 140)
+            .frame(height: 140).clipped()
         }
     }
 }

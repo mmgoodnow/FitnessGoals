@@ -58,6 +58,7 @@ struct ProgressChartView: View {
                     .interpolationMethod(.monotone)
                 }
             }
+            .allowsHitTesting(false)
             .chartXScale(domain: 1 ... vm.daysInYear)
             .chartYScale(domain: 0 ... vm.yearlyGoalMiles)
             .chartXAxis {
@@ -79,7 +80,7 @@ struct ProgressChartView: View {
                     }
                 }
             }
-            .frame(height: 180)
+            .frame(height: 180).clipped()
         }
     }
 }

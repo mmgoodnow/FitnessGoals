@@ -105,7 +105,7 @@ class HealthKitService: ObservableObject {
             .map { $0.quantity.doubleValue(for: HKUnit(from: "count/min")) }
             .sorted()
         let idx = Int(Double(bpms.count - 1) * 0.95)
-        return bpms[idx]
+        return bpms[idx] * 1.03  // ~3% buffer to approximate true max above p95
     }
 
     func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {

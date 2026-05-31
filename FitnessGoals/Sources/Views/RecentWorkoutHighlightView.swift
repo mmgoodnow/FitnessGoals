@@ -6,47 +6,55 @@ struct RecentWorkoutHighlightView: View {
     var body: some View {
         if let w = vm.mostRecentWorkout {
             CardView(title: "Last Workout", systemImage: "bolt.fill", accentColor: .orange) {
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: 20) {
                     // Date block
                     VStack(spacing: 2) {
-                        Text(w.startDate.formatted(.dateTime.month(.abbreviated).day()))
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                        Text(w.startDate.formatted(.dateTime.month(.wide)))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(w.startDate.formatted(.dateTime.day()))
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .lineLimit(1)
                         Text(w.startDate.formatted(.dateTime.weekday(.wide)))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(width: 64)
+                    .frame(width: 72)
 
                     Divider()
 
-                    // Stats
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        HighlightStat(
-                            label: "Distance",
-                            value: Formatters.formatMiles(w.distance),
-                            icon: "figure.run"
-                        )
-                        HighlightStat(
-                            label: "Duration",
-                            value: Formatters.formatDuration(w.duration),
-                            icon: "clock"
-                        )
-                        if let spm = w.paceSecondsPerMeter {
+                    // 2x2 stats grid
+                    VStack(spacing: 12) {
+                        HStack(spacing: 0) {
                             HighlightStat(
-                                label: vm.sport.usesPace ? "Pace" : "Speed",
-                                value: vm.sport.usesPace ? Formatters.formatPace(spm) : Formatters.formatSpeed(spm),
-                                icon: "speedometer"
+                                label: "Distance",
+                                value: Formatters.formatMiles(w.distance),
+                                icon: "figure.run"
+                            )
+                            HighlightStat(
+                                label: "Duration",
+                                value: Formatters.formatDuration(w.duration),
+                                icon: "clock"
                             )
                         }
-                        if let hr = w.avgHeartRate {
-                            let zone = HRZone.zone(for: hr, maxHR: vm.estimatedMaxHR)
-                            HighlightStat(
-                                label: "Avg HR",
-                                value: String(format: "%.0f bpm", hr),
-                                icon: "heart.fill",
-                                valueColor: zone?.color ?? .primary,
-                                subtitle: zone?.name
-                            )
+                        HStack(spacing: 0) {
+                            if let spm = w.paceSecondsPerMeter {
+                                HighlightStat(
+                                    label: vm.sport.usesPace ? "Pace" : "Speed",
+                                    value: vm.sport.usesPace ? Formatters.formatPace(spm) : Formatters.formatSpeed(spm),
+                                    icon: "speedometer"
+                                )
+                            }
+                            if let hr = w.avgHeartRate {
+                                let zone = HRZone.zone(for: hr, maxHR: vm.estimatedMaxHR)
+                                HighlightStat(
+                                    label: "Avg HR",
+                                    value: String(format: "%.0f bpm", hr),
+                                    icon: "heart.fill",
+                                    valueColor: zone?.color ?? .primary,
+                                    subtitle: zone?.name
+                                )
+                            }
                         }
                     }
                 }
@@ -63,11 +71,11 @@ private struct HighlightStat: View {
     var subtitle: String? = nil
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 6) {
             Image(systemName: icon)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .frame(width: 16)
+                .padding(.top, 2)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
                     .font(.caption2)
@@ -75,6 +83,7 @@ private struct HighlightStat: View {
                 Text(value)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(valueColor)
+                    .lineLimit(1)
                 if let sub = subtitle {
                     Text(sub)
                         .font(.caption2)

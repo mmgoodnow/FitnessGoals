@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var showSettings = false
 
     var body: some View {
         ZStack {
@@ -10,11 +11,7 @@ struct DashboardView: View {
 
             ScrollView {
                 VStack(spacing: 14) {
-                    SportPickerView()
-                        .padding(.horizontal)
                     RecentWorkoutHighlightView()
-                        .padding(.horizontal)
-                    GoalSetterView()
                         .padding(.horizontal)
                     ProgressCardView()
                         .padding(.horizontal)
@@ -44,6 +41,18 @@ struct DashboardView: View {
         }
         .navigationTitle(vm.sport.rawValue + " Goals")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView().environmentObject(vm)
+        }
         .refreshable { await vm.load() }
     }
 }

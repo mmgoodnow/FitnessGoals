@@ -85,21 +85,27 @@ class HealthKitService: ObservableObject {
         }
     }
 
-    /// Queries the peak instantaneous heart rate sample ever recorded.
+    /// Returns the 95th percentile instantaneous HR across all samples, as a robust max HR estimate.
     func fetchAllTimeMaxHeartRate() async throws -> Double? {
         let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKStatisticsQuery(
-                quantityType: hrType,
-                quantitySamplePredicate: nil,  // all time
-                options: .discreteMax
-            ) { _, stats, error in
+        let samples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: hrType,
+                predicate: nil,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
                 if let error { continuation.resume(throwing: error); return }
-                let bpm = stats?.maximumQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
-                continuation.resume(returning: bpm)
+                continuation.resume(returning: samples as? [HKQuantitySample] ?? [])
             }
             store.execute(query)
         }
+        guard !samples.isEmpty else { return nil }
+        let bpms = samples
+            .map { $0.quantity.doubleValue(for: HKUnit(from: "count/min")) }
+            .sorted()
+        let idx = Int(Double(bpms.count - 1) * 0.95)
+        return bpms[idx]
     }
 
     func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {

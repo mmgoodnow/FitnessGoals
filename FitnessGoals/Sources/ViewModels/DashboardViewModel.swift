@@ -164,6 +164,7 @@ class DashboardViewModel: ObservableObject {
     struct WeekdayPoint: Identifiable {
         let id: Int
         let label: String
+        let runCount: Int
         let runFrequency: Double   // fraction of that weekday's occurrences where I ran
         let avgMilesWhenRan: Double  // avg distance on days I did run
     }
@@ -190,6 +191,7 @@ class DashboardViewModel: ObservableObject {
             WeekdayPoint(
                 id: i,
                 label: labels[i],
+                runCount: runCounts[i],
                 runFrequency: calendarCounts[i] > 0 ? Double(runCounts[i]) / Double(calendarCounts[i]) : 0,
                 avgMilesWhenRan: runCounts[i] > 0 ? totals[i] / Double(runCounts[i]) : 0
             )

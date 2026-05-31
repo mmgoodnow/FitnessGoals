@@ -30,6 +30,7 @@
 		A021 /* HRZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = F021 /* HRZone.swift */; };
 		A022 /* RecentWorkoutHighlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F022 /* RecentWorkoutHighlightView.swift */; };
 		A023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F023 /* SettingsView.swift */; };
+		A024 /* BestEffortsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F024 /* BestEffortsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		F021 /* HRZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZone.swift; sourceTree = "<group>"; };
 		F022 /* RecentWorkoutHighlightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWorkoutHighlightView.swift; sourceTree = "<group>"; };
 		F023 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F024 /* BestEffortsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestEffortsView.swift; sourceTree = "<group>"; };
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				F020 /* TrendChartsView.swift */,
 				F022 /* RecentWorkoutHighlightView.swift */,
 				F023 /* SettingsView.swift */,
+				F024 /* BestEffortsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -267,6 +270,7 @@
 				A021 /* HRZone.swift in Sources */,
 				A022 /* RecentWorkoutHighlightView.swift in Sources */,
 				A023 /* SettingsView.swift in Sources */,
+				A024 /* BestEffortsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

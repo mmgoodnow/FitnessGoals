@@ -250,6 +250,73 @@ class DashboardViewModel: ObservableObject {
             }
     }
 
+    // MARK: - Best efforts
+
+    struct BestEffortDistance: Identifiable {
+        let id: String
+        let label: String
+        let meters: Double
+    }
+
+    static let bestEffortDistances: [BestEffortDistance] = [
+        .init(id: "1mi",   label: "1 mi",        meters: 1609.34),
+        .init(id: "5k",    label: "5K",           meters: 5000),
+        .init(id: "10k",   label: "10K",          meters: 10000),
+        .init(id: "half",  label: "Half Marathon", meters: 21097.5),
+        .init(id: "full",  label: "Marathon",      meters: 42195),
+    ]
+
+    struct BestEffort: Identifiable {
+        let id: String          // distance id
+        let label: String
+        let meters: Double
+        let time: TimeInterval  // estimated finish time at avg pace
+        let date: Date
+        let workoutID: UUID
+    }
+
+    /// All-time best effort (fastest avg pace) for each standard distance,
+    /// using workouts that are at least that distance.
+    var bestEfforts: [BestEffort] {
+        let all = (historicalWorkouts.values.flatMap { $0 } + workouts)
+            .filter { $0.paceSecondsPerMeter != nil }
+        return Self.bestEffortDistances.compactMap { dist in
+            let candidates = all.filter { $0.distance >= dist.meters }
+            guard let best = candidates.min(by: { $0.paceSecondsPerMeter! < $1.paceSecondsPerMeter! }),
+                  let pace = best.paceSecondsPerMeter else { return nil }
+            return BestEffort(
+                id: dist.id,
+                label: dist.label,
+                meters: dist.meters,
+                time: pace * dist.meters,
+                date: best.startDate,
+                workoutID: best.id
+            )
+        }
+    }
+
+    struct BestEffortPoint: Identifiable {
+        let id: UUID        // workout id
+        let date: Date
+        let time: TimeInterval
+        let isBest: Bool    // true if this is the all-time best at time of workout
+    }
+
+    /// Progression of best efforts over time for a given distance.
+    func bestEffortProgression(for distanceID: String) -> [BestEffortPoint] {
+        guard let dist = Self.bestEffortDistances.first(where: { $0.id == distanceID }) else { return [] }
+        let all = (historicalWorkouts.values.flatMap { $0 } + workouts)
+            .filter { $0.distance >= dist.meters && $0.paceSecondsPerMeter != nil }
+            .sorted { $0.startDate < $1.startDate }
+        var best: Double = .infinity
+        return all.map { w in
+            let t = w.paceSecondsPerMeter! * dist.meters
+            let isBest = t < best
+            if isBest { best = t }
+            return BestEffortPoint(id: w.id, date: w.startDate, time: t, isBest: isBest)
+        }
+    }
+
     // MARK: - Most recent workout
 
     var mostRecentWorkout: Workout? {

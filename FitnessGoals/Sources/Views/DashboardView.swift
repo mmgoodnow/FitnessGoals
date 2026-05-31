@@ -20,6 +20,8 @@ struct DashboardView: View {
                     WeeklyChartView()
                         .padding(.horizontal)
                     if vm.sport.usesPace {
+                        BestEffortsView()
+                            .padding(.horizontal)
                         PaceTrendView()
                             .padding(.horizontal)
                         HeartRateTrendView()

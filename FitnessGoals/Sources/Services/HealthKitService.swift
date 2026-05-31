@@ -85,13 +85,39 @@ class HealthKitService: ObservableObject {
         }
     }
 
-    /// Returns the 95th percentile instantaneous HR across all samples, as a robust max HR estimate.
+    /// Returns the 95th percentile instantaneous HR recorded during workouts, as a robust max HR estimate.
     func fetchAllTimeMaxHeartRate() async throws -> Double? {
         let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        let samples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+
+        // Fetch all running/cycling workouts ever to build date intervals
+        let workoutSamples: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: .workoutType(),
+                predicate: NSCompoundPredicate(orPredicateWithSubpredicates: [
+                    HKQuery.predicateForWorkouts(with: .running),
+                    HKQuery.predicateForWorkouts(with: .cycling),
+                ]),
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if let error { continuation.resume(throwing: error); return }
+                continuation.resume(returning: samples as? [HKWorkout] ?? [])
+            }
+            store.execute(query)
+        }
+        guard !workoutSamples.isEmpty else { return nil }
+
+        // Build a predicate that matches HR samples falling inside any workout
+        let workoutPredicate = NSCompoundPredicate(orPredicateWithSubpredicates:
+            workoutSamples.map {
+                HKQuery.predicateForSamples(withStart: $0.startDate, end: $0.endDate, options: .strictStartDate)
+            }
+        )
+
+        let hrSamples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: hrType,
-                predicate: nil,
+                predicate: workoutPredicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
@@ -100,12 +126,13 @@ class HealthKitService: ObservableObject {
             }
             store.execute(query)
         }
-        guard !samples.isEmpty else { return nil }
-        let bpms = samples
+        guard !hrSamples.isEmpty else { return nil }
+
+        let bpms = hrSamples
             .map { $0.quantity.doubleValue(for: HKUnit(from: "count/min")) }
             .sorted()
         let idx = Int(Double(bpms.count - 1) * 0.95)
-        return bpms[idx] * 1.03  // ~3% buffer to approximate true max above p95
+        return bpms[idx] * 1.03
     }
 
     func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {

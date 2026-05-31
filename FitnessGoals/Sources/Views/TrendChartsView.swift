@@ -1,11 +1,12 @@
 import SwiftUI
 import Charts
 
-// IQR-based outlier removal + domain padding
-private func cleanDomain(_ values: [Double], reversed: Bool = false, pad: Double = 0.10) -> ClosedRange<Double> {
+// IQR-based outlier removal + domain padding — always returns lo <= hi
+private func cleanDomain(_ values: [Double], pad: Double = 0.10) -> ClosedRange<Double> {
     guard values.count >= 2 else {
         let v = values.first ?? 0
-        return (v * 0.9) ... (v * 1.1)
+        let delta = max(abs(v) * 0.1, 1)
+        return (v - delta) ... (v + delta)
     }
     let sorted = values.sorted()
     let q1 = sorted[sorted.count / 4]
@@ -14,12 +15,10 @@ private func cleanDomain(_ values: [Double], reversed: Bool = false, pad: Double
     let lo = q1 - 1.5 * iqr
     let hi = q3 + 1.5 * iqr
     let inliers = values.filter { $0 >= lo && $0 <= hi }
-    let mn = (inliers.min() ?? sorted.first!)
-    let mx = (inliers.max() ?? sorted.last!)
+    let mn = inliers.min() ?? sorted.first!
+    let mx = inliers.max() ?? sorted.last!
     let span = max(mx - mn, 1)
-    return reversed
-        ? (mn - span * pad) ... (mx + span * pad)  // will be reversed by chartYScale
-        : (mn - span * pad) ... (mx + span * pad)
+    return (mn - span * pad) ... (mx + span * pad)
 }
 
 private func removeOutliers<T>(_ points: [T], value: (T) -> Double) -> [T] {
@@ -42,8 +41,14 @@ struct PaceTrendView: View {
         return removeOutliers(raw) { $0.paceMinPerMile! }
     }
 
+    // Negate pace so faster (smaller) values appear higher on chart
+    private var negatedPoints: [(point: DashboardViewModel.WorkoutTrendPoint, negPace: Double)] {
+        points.map { ($0, -$0.paceMinPerMile!) }
+    }
+
     private var domain: ClosedRange<Double> {
-        cleanDomain(points.map { $0.paceMinPerMile! }, reversed: true)
+        let d = cleanDomain(points.map { -$0.paceMinPerMile! })
+        return d
     }
 
     var body: some View {
@@ -51,30 +56,32 @@ struct PaceTrendView: View {
             if points.isEmpty {
                 Text("No data").font(.caption).foregroundStyle(.secondary)
             } else {
-                Chart(points) { p in
+                Chart(negatedPoints, id: \.point.id) { item in
                     PointMark(
-                        x: .value("Date", p.date),
-                        y: .value("Min/mi", p.paceMinPerMile!)
+                        x: .value("Date", item.point.date),
+                        y: .value("Min/mi", item.negPace)
                     )
                     .foregroundStyle(.orange.opacity(0.7))
                     .symbolSize(30)
 
                     if points.count > 1 {
                         LineMark(
-                            x: .value("Date", p.date),
-                            y: .value("Min/mi", p.paceMinPerMile!)
+                            x: .value("Date", item.point.date),
+                            y: .value("Min/mi", item.negPace)
                         )
                         .foregroundStyle(.orange.opacity(0.3))
                         .interpolationMethod(.monotone)
                     }
                 }
-                .chartYScale(domain: domain.upperBound ... domain.lowerBound)
+                .chartYScale(domain: domain)
                 .chartYAxis {
                     AxisMarks(position: .trailing) { val in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         AxisValueLabel {
+                            // val is negative; display as positive pace
                             if let v = val.as(Double.self) {
-                                let m = Int(v); let s = Int((v - Double(m)) * 60)
+                                let pos = -v
+                                let m = Int(pos); let s = Int((pos - Double(m)) * 60)
                                 Text(String(format: "%d:%02d", m, s)).font(.caption2)
                             }
                         }

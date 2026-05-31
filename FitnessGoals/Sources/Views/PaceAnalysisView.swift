@@ -79,7 +79,8 @@ struct PaceAnalysisView: View {
 
                         BarMark(
                             x: .value("Year", String(item.point.year)),
-                            y: .value(vm.sport.usesPace ? "Min/mi" : "mph", item.yVal)
+                            y: .value(vm.sport.usesPace ? "Min/mi" : "mph", item.yVal),
+                            width: .ratio(0.5)
                         )
                         .foregroundStyle(
                             isCurrent
@@ -118,6 +119,7 @@ struct PaceAnalysisView: View {
                             }
                         }
                     }
+                    .chartXSelection(value: .constant(nil as String?))
                     .frame(height: 180)
                 }
             }

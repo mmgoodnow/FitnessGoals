@@ -9,7 +9,8 @@ struct WeekdayFrequencyChartView: View {
             Chart(vm.weekdayData) { point in
                 BarMark(
                     x: .value("Day", point.label),
-                    y: .value("Runs", point.runCount)
+                    y: .value("Runs", point.runCount),
+                    width: .ratio(0.5)
                 )
                 .foregroundStyle(
                     LinearGradient(colors: [.teal, .mint], startPoint: .bottom, endPoint: .top)
@@ -24,6 +25,7 @@ struct WeekdayFrequencyChartView: View {
                     }
                 }
             }
+            .chartXSelection(value: .constant(nil as String?))
             .frame(height: 140)
         }
     }
@@ -37,7 +39,8 @@ struct WeekdayDistanceChartView: View {
             Chart(vm.weekdayData.filter { $0.avgMilesWhenRan > 0 }) { point in
                 BarMark(
                     x: .value("Day", point.label),
-                    y: .value("Avg Miles", point.avgMilesWhenRan)
+                    y: .value("Avg Miles", point.avgMilesWhenRan),
+                    width: .ratio(0.5)
                 )
                 .foregroundStyle(
                     LinearGradient(colors: [.indigo, .purple], startPoint: .bottom, endPoint: .top)
@@ -52,6 +55,7 @@ struct WeekdayDistanceChartView: View {
                     }
                 }
             }
+            .chartXSelection(value: .constant(nil as String?))
             .frame(height: 140)
         }
     }

@@ -229,25 +229,70 @@ class DashboardViewModel: ObservableObject {
             }
     }
 
+    // MARK: - Most recent workout
+
+    var mostRecentWorkout: Workout? {
+        workouts.max(by: { $0.startDate < $1.startDate })
+    }
+
+    // MARK: - Max HR estimation
+
+    /// Highest avg HR seen across all years + 5% buffer (avg HR during effort < true max).
+    var estimatedMaxHR: Double {
+        let allWorkouts = workouts + historicalWorkouts.values.flatMap { $0 }
+        let maxAvg = allWorkouts.compactMap { $0.avgHeartRate }.max() ?? 190
+        return maxAvg * 1.05
+    }
+
     // MARK: - Year-over-year pace analysis
 
     struct YearPacePoint: Identifiable {
-        let id: Int
+        let id: String
         let year: Int
+        let zone: HRZone?      // nil = all zones
         let avgPaceSecondsPerMeter: Double?
         let totalMiles: Double
     }
 
+    /// All years available across current + historical data.
+    private var allYears: [Int] {
+        historicalWorkouts.keys.sorted() + [currentYear]
+    }
+
+    private func workouts(for year: Int) -> [Workout] {
+        year == currentYear ? workouts : (historicalWorkouts[year] ?? [])
+    }
+
+    /// YoY pace for all workouts (no zone filter).
     var paceAnalysisData: [YearPacePoint] {
-        let allYears = historicalWorkouts.keys.sorted() + [currentYear]
-        return allYears.map { year in
-            let ws = year == currentYear ? workouts : (historicalWorkouts[year] ?? [])
-            let filtered = ws.filter { $0.distance > 400 }
-            let totalMeters = filtered.reduce(0.0) { $0 + $1.distance }
-            let totalSeconds = filtered.reduce(0.0) { $0 + $1.duration }
+        allYears.map { year in
+            let ws = workouts(for: year).filter { $0.distance > 400 }
+            let totalMeters = ws.reduce(0.0) { $0 + $1.distance }
+            let totalSeconds = ws.reduce(0.0) { $0 + $1.duration }
             return YearPacePoint(
-                id: year,
+                id: "\(year)-all",
                 year: year,
+                zone: nil,
+                avgPaceSecondsPerMeter: totalMeters > 0 ? totalSeconds / totalMeters : nil,
+                totalMiles: Formatters.miles(totalMeters)
+            )
+        }
+    }
+
+    /// YoY pace filtered to a specific HR zone.
+    func paceAnalysisData(for zone: HRZone) -> [YearPacePoint] {
+        let maxHR = estimatedMaxHR
+        return allYears.map { year in
+            let ws = workouts(for: year).filter { w in
+                guard w.distance > 400, let hr = w.avgHeartRate else { return false }
+                return HRZone.zone(for: hr, maxHR: maxHR) == zone
+            }
+            let totalMeters = ws.reduce(0.0) { $0 + $1.distance }
+            let totalSeconds = ws.reduce(0.0) { $0 + $1.duration }
+            return YearPacePoint(
+                id: "\(year)-z\(zone.rawValue)",
+                year: year,
+                zone: zone,
                 avgPaceSecondsPerMeter: totalMeters > 0 ? totalSeconds / totalMeters : nil,
                 totalMiles: Formatters.miles(totalMeters)
             )

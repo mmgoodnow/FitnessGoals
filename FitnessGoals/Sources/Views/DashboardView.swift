@@ -12,6 +12,8 @@ struct DashboardView: View {
                 VStack(spacing: 14) {
                     SportPickerView()
                         .padding(.horizontal)
+                    RecentWorkoutHighlightView()
+                        .padding(.horizontal)
                     GoalSetterView()
                         .padding(.horizontal)
                     ProgressCardView()

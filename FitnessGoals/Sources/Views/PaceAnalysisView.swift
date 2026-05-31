@@ -3,65 +3,142 @@ import Charts
 
 struct PaceAnalysisView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var selectedZone: HRZone? = nil  // nil = all zones
+
+    private var data: [DashboardViewModel.YearPacePoint] {
+        if let zone = selectedZone {
+            return vm.paceAnalysisData(for: zone)
+        }
+        return vm.paceAnalysisData
+    }
 
     private var hasData: Bool {
-        vm.paceAnalysisData.contains { $0.avgPaceSecondsPerMeter != nil }
+        data.contains { $0.avgPaceSecondsPerMeter != nil }
+    }
+
+    // Negate pace values so faster = higher bar (reversed y axis without crashing)
+    private var chartData: [(point: DashboardViewModel.YearPacePoint, yVal: Double)] {
+        data.compactMap { p in
+            guard let pace = p.avgPaceSecondsPerMeter else { return nil }
+            let raw = vm.sport.usesPace ? pace * 1609.344 / 60.0 : (1.0 / pace) * 2.23694
+            let y = vm.sport.usesPace ? -raw : raw
+            return (p, y)
+        }
+    }
+
+    private var domain: ClosedRange<Double> {
+        let vals = chartData.map { $0.yVal }
+        guard !vals.isEmpty else { return 0 ... 1 }
+        let mn = vals.min()!
+        let mx = vals.max()!
+        let pad = max(mx - mn, 0.5) * 0.15
+        return (mn - pad) ... (mx + pad)
     }
 
     var body: some View {
         CardView(title: "Year-over-Year \(vm.sport.usesPace ? "Pace" : "Speed")",
-                 systemImage: "chart.line.uptrend.xyaxis.circle.fill",
+                 systemImage: "chart.bar.xaxis",
                  accentColor: .blue) {
-            if !hasData {
-                Text("No historical data available")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-            } else {
-                Chart(vm.paceAnalysisData) { point in
-                    if let pace = point.avgPaceSecondsPerMeter {
-                        let yVal = vm.sport.usesPace
-                            ? pace * 1609.344 / 60.0
-                            : (1.0 / pace) * 2.23694
+            VStack(alignment: .leading, spacing: 12) {
+                // Zone picker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ZonePill(label: "All", color: .blue, selected: selectedZone == nil) {
+                            selectedZone = nil
+                        }
+                        ForEach(HRZone.allCases) { zone in
+                            ZonePill(
+                                label: zone.name,
+                                color: zone.color,
+                                selected: selectedZone == zone
+                            ) {
+                                selectedZone = zone
+                            }
+                        }
+                    }
+                }
+
+                if selectedZone != nil {
+                    let maxHR = vm.estimatedMaxHR
+                    let zone = selectedZone!
+                    let lo = Int(zone.bpmRange(maxHR: maxHR).lowerBound)
+                    let hi = Int(zone.bpmRange(maxHR: maxHR).upperBound)
+                    Text("Avg HR \(lo)–\(hi) bpm · Est. max HR \(Int(maxHR)) bpm")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                if !hasData {
+                    Text("No data for this zone")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Chart(chartData, id: \.point.id) { item in
+                        let isCurrent = item.point.year == Calendar.current.component(.year, from: Date())
+                        let barColor = selectedZone?.color ?? .blue
 
                         BarMark(
-                            x: .value("Year", String(point.year)),
-                            y: .value(vm.sport.usesPace ? "Min/mi" : "mph", yVal)
+                            x: .value("Year", String(item.point.year)),
+                            y: .value(vm.sport.usesPace ? "Min/mi" : "mph", item.yVal)
                         )
                         .foregroundStyle(
-                            point.year == Calendar.current.component(.year, from: Date())
-                                ? AnyShapeStyle(LinearGradient(colors: [.blue, .cyan], startPoint: .bottom, endPoint: .top))
-                                : AnyShapeStyle(.secondary.opacity(0.4))
+                            isCurrent
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [barColor.opacity(0.7), barColor],
+                                    startPoint: .bottom, endPoint: .top))
+                                : AnyShapeStyle(barColor.opacity(0.3))
                         )
                         .cornerRadius(6)
                         .annotation(position: .top) {
                             if vm.sport.usesPace {
-                                let m = Int(yVal); let s = Int((yVal - Double(m)) * 60)
+                                let pos = -item.yVal
+                                let m = Int(pos); let s = Int((pos - Double(m)) * 60)
                                 Text(String(format: "%d:%02d", m, s))
                                     .font(.caption2).foregroundStyle(.secondary)
                             } else {
-                                Text(String(format: "%.1f", yVal))
+                                Text(String(format: "%.1f", item.yVal))
                                     .font(.caption2).foregroundStyle(.secondary)
                             }
                         }
                     }
-                }
-                .chartYAxis(vm.sport.usesPace ? .automatic : .automatic)
-                .chartYScale(domain: .automatic(reversed: vm.sport.usesPace))
-                .chartYAxis {
-                    AxisMarks(position: .trailing) { val in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel {
-                            if vm.sport.usesPace, let v = val.as(Double.self) {
-                                let m = Int(v); let s = Int((v - Double(m)) * 60)
-                                Text(String(format: "%d:%02d", m, s)).font(.caption2)
-                            } else if let v = val.as(Double.self) {
-                                Text(String(format: "%.1f", v)).font(.caption2)
+                    .chartYScale(domain: domain)
+                    .chartYAxis {
+                        AxisMarks(position: .trailing) { val in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            AxisValueLabel {
+                                if let v = val.as(Double.self) {
+                                    if vm.sport.usesPace {
+                                        let pos = -v
+                                        let m = Int(pos); let s = Int((pos - Double(m)) * 60)
+                                        Text(String(format: "%d:%02d", m, s)).font(.caption2)
+                                    } else {
+                                        Text(String(format: "%.1f", v)).font(.caption2)
+                                    }
+                                }
                             }
                         }
                     }
+                    .frame(height: 180)
                 }
-                .frame(height: 180)
             }
+        }
+    }
+}
+
+private struct ZonePill: View {
+    let label: String
+    let color: Color
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.weight(selected ? .semibold : .regular))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(selected ? color : Color(uiColor: .tertiarySystemFill), in: Capsule())
+                .foregroundStyle(selected ? .white : .primary)
         }
     }
 }

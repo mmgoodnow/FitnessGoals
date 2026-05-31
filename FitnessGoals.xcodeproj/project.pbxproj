@@ -27,6 +27,8 @@
 		A018 /* GoalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F018 /* GoalSettings.swift */; };
 		A019 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F019 /* HealthKit.framework */; };
 		A020 /* TrendChartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F020 /* TrendChartsView.swift */; };
+		A021 /* HRZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = F021 /* HRZone.swift */; };
+		A022 /* RecentWorkoutHighlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F022 /* RecentWorkoutHighlightView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +51,8 @@
 		F017 /* SportType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportType.swift; sourceTree = "<group>"; };
 		F018 /* GoalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettings.swift; sourceTree = "<group>"; };
 		F020 /* TrendChartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartsView.swift; sourceTree = "<group>"; };
+		F021 /* HRZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZone.swift; sourceTree = "<group>"; };
+		F022 /* RecentWorkoutHighlightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWorkoutHighlightView.swift; sourceTree = "<group>"; };
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
@@ -100,6 +104,7 @@
 				F016 /* Workout.swift */,
 				F017 /* SportType.swift */,
 				F018 /* GoalSettings.swift */,
+				F021 /* HRZone.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -156,6 +161,7 @@
 				F011 /* RecentWorkoutsView.swift */,
 				F012 /* CardView.swift */,
 				F020 /* TrendChartsView.swift */,
+				F022 /* RecentWorkoutHighlightView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -255,6 +261,8 @@
 				A017 /* SportType.swift in Sources */,
 				A018 /* GoalSettings.swift in Sources */,
 				A020 /* TrendChartsView.swift in Sources */,
+				A021 /* HRZone.swift in Sources */,
+				A022 /* RecentWorkoutHighlightView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

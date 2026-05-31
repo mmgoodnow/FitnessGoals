@@ -176,7 +176,8 @@ struct VO2TrendView: View {
                 Chart(points) { p in
                     AreaMark(
                         x: .value("Date", p.date),
-                        y: .value("VO₂", p.vo2!)
+                        yStart: .value("Base", domain.lowerBound),
+                        yEnd: .value("VO₂", p.vo2!)
                     )
                     .foregroundStyle(
                         LinearGradient(colors: [.purple.opacity(0.3), .purple.opacity(0.02)],

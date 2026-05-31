@@ -164,12 +164,14 @@ class DashboardViewModel: ObservableObject {
     struct WeekdayPoint: Identifiable {
         let id: Int
         let label: String
-        let avgMiles: Double
+        let runFrequency: Double   // fraction of that weekday's occurrences where I ran
+        let avgMilesWhenRan: Double  // avg distance on days I did run
     }
 
     var weekdayData: [WeekdayPoint] {
         let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         var totals = [Double](repeating: 0, count: 7)
+        var runCounts = [Int](repeating: 0, count: 7)
         var calendarCounts = [Int](repeating: 0, count: 7)
         let calendar = Calendar.current
         var yearStart = DateComponents()
@@ -180,11 +182,17 @@ class DashboardViewModel: ObservableObject {
             calendarCounts[Formatters.weekdayIndex(day)] += 1
         }
         for w in workouts {
-            totals[Formatters.weekdayIndex(w.startDate)] += Formatters.miles(w.distance)
+            let i = Formatters.weekdayIndex(w.startDate)
+            totals[i] += Formatters.miles(w.distance)
+            runCounts[i] += 1
         }
         return (0..<7).map { i in
-            WeekdayPoint(id: i, label: labels[i],
-                         avgMiles: calendarCounts[i] > 0 ? totals[i] / Double(calendarCounts[i]) : 0)
+            WeekdayPoint(
+                id: i,
+                label: labels[i],
+                runFrequency: calendarCounts[i] > 0 ? Double(runCounts[i]) / Double(calendarCounts[i]) : 0,
+                avgMilesWhenRan: runCounts[i] > 0 ? totals[i] / Double(runCounts[i]) : 0
+            )
         }
     }
 

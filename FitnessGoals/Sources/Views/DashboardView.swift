@@ -28,7 +28,9 @@ struct DashboardView: View {
                         VO2TrendView()
                             .padding(.horizontal)
                     }
-                    WeekdayAverageChartView()
+                    WeekdayFrequencyChartView()
+                        .padding(.horizontal)
+                    WeekdayDistanceChartView()
                         .padding(.horizontal)
                     PaceAnalysisView()
                         .padding(.horizontal)

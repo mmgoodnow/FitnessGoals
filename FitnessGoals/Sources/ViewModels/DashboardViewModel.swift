@@ -221,8 +221,17 @@ class DashboardViewModel: ObservableObject {
     }
 
     var workoutTrends: [WorkoutTrendPoint] {
-        workouts
-            .filter { $0.distance > 800 }  // skip very short efforts
+        trendPoints(from: workouts)
+    }
+
+    var allTimeWorkoutTrends: [WorkoutTrendPoint] {
+        let all = historicalWorkouts.values.flatMap { $0 } + workouts
+        return trendPoints(from: all)
+    }
+
+    private func trendPoints(from source: [Workout]) -> [WorkoutTrendPoint] {
+        source
+            .filter { $0.distance > 800 }
             .sorted { $0.startDate < $1.startDate }
             .map { w in
                 let paceMinPerMile: Double?

@@ -1,6 +1,11 @@
 import SwiftUI
 import Charts
 
+private enum Lookback: String, CaseIterable {
+    case thisYear = "This Year"
+    case allTime  = "All Time"
+}
+
 // IQR-based outlier removal + domain padding — always returns lo <= hi
 private func cleanDomain(_ values: [Double], pad: Double = 0.10) -> ClosedRange<Double> {
     guard values.count >= 2 else {
@@ -32,27 +37,42 @@ private func removeOutliers<T>(_ points: [T], value: (T) -> Double) -> [T] {
     return points.filter { value($0) >= lo && value($0) <= hi }
 }
 
-// Pace over time (this year, per workout)
+private struct XAxisMarks: ChartContent {
+    let lookback: Lookback
+
+    var body: some ChartContent {
+        // just a placeholder — xAxis is applied as a modifier
+        LineMark(x: .value("x", 0), y: .value("y", 0)).opacity(0)
+    }
+}
+
+// MARK: - Pace
+
 struct PaceTrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var lookback: Lookback = .thisYear
+
+    private var allPoints: [DashboardViewModel.WorkoutTrendPoint] {
+        lookback == .thisYear ? vm.workoutTrends : vm.allTimeWorkoutTrends
+    }
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        let raw = vm.workoutTrends.filter { $0.paceMinPerMile != nil }
+        let raw = allPoints.filter { $0.paceMinPerMile != nil }
         return removeOutliers(raw) { $0.paceMinPerMile! }
     }
 
-    // Negate pace so faster (smaller) values appear higher on chart
     private var negatedPoints: [(point: DashboardViewModel.WorkoutTrendPoint, negPace: Double)] {
         points.map { ($0, -$0.paceMinPerMile!) }
     }
 
     private var domain: ClosedRange<Double> {
-        let d = cleanDomain(points.map { -$0.paceMinPerMile! })
-        return d
+        cleanDomain(points.map { -$0.paceMinPerMile! })
     }
 
     var body: some View {
-        CardView(title: "Pace This Year", systemImage: "stopwatch", accentColor: .orange) {
+        CardView(title: "Pace", systemImage: "stopwatch", accentColor: .orange) {
+            LookbackPicker(selection: $lookback)
+
             if points.isEmpty {
                 Text("No data").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -79,7 +99,6 @@ struct PaceTrendView: View {
                     AxisMarks(position: .trailing) { val in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         AxisValueLabel {
-                            // val is negative; display as positive pace
                             if let v = val.as(Double.self) {
                                 let pos = -v
                                 let m = Int(pos); let s = Int((pos - Double(m)) * 60)
@@ -89,23 +108,41 @@ struct PaceTrendView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .month, count: 2)) { _ in
+                    AxisMarks(values: xAxisStride) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
+                        AxisValueLabel(format: xAxisFormat).font(.caption2)
                     }
                 }
                 .frame(height: 160).clipped()
             }
         }
     }
+
+    private var xAxisStride: AxisMarkValues {
+        lookback == .thisYear
+            ? .stride(by: .month, count: 2)
+            : .stride(by: .year, count: 1)
+    }
+
+    private var xAxisFormat: Date.FormatStyle {
+        lookback == .thisYear
+            ? .dateTime.month(.abbreviated)
+            : .dateTime.year()
+    }
 }
 
-// Heart rate over time (this year, per workout)
+// MARK: - Heart Rate
+
 struct HeartRateTrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var lookback: Lookback = .thisYear
+
+    private var allPoints: [DashboardViewModel.WorkoutTrendPoint] {
+        lookback == .thisYear ? vm.workoutTrends : vm.allTimeWorkoutTrends
+    }
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        let raw = vm.workoutTrends.filter { $0.heartRate != nil }
+        let raw = allPoints.filter { $0.heartRate != nil }
         return removeOutliers(raw) { $0.heartRate! }
     }
 
@@ -114,7 +151,9 @@ struct HeartRateTrendView: View {
     }
 
     var body: some View {
-        CardView(title: "Avg Heart Rate This Year", systemImage: "heart.fill", accentColor: .red) {
+        CardView(title: "Avg Heart Rate", systemImage: "heart.fill", accentColor: .red) {
+            LookbackPicker(selection: $lookback)
+
             if points.isEmpty {
                 Text("No heart rate data").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -146,23 +185,41 @@ struct HeartRateTrendView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .month, count: 2)) { _ in
+                    AxisMarks(values: xAxisStride) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
+                        AxisValueLabel(format: xAxisFormat).font(.caption2)
                     }
                 }
                 .frame(height: 160).clipped()
             }
         }
     }
+
+    private var xAxisStride: AxisMarkValues {
+        lookback == .thisYear
+            ? .stride(by: .month, count: 2)
+            : .stride(by: .year, count: 1)
+    }
+
+    private var xAxisFormat: Date.FormatStyle {
+        lookback == .thisYear
+            ? .dateTime.month(.abbreviated)
+            : .dateTime.year()
+    }
 }
 
-// Estimated VO2 over time (this year, per workout)
+// MARK: - VO2
+
 struct VO2TrendView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var lookback: Lookback = .thisYear
+
+    private var allPoints: [DashboardViewModel.WorkoutTrendPoint] {
+        lookback == .thisYear ? vm.workoutTrends : vm.allTimeWorkoutTrends
+    }
 
     private var points: [DashboardViewModel.WorkoutTrendPoint] {
-        let raw = vm.workoutTrends.filter { $0.vo2 != nil }
+        let raw = allPoints.filter { $0.vo2 != nil }
         return removeOutliers(raw) { $0.vo2! }
     }
 
@@ -171,7 +228,9 @@ struct VO2TrendView: View {
     }
 
     var body: some View {
-        CardView(title: "Est. VO₂ This Year", systemImage: "lungs.fill", accentColor: .purple) {
+        CardView(title: "Est. VO₂", systemImage: "lungs.fill", accentColor: .purple) {
+            LookbackPicker(selection: $lookback)
+
             if points.isEmpty {
                 Text("No data").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -206,9 +265,9 @@ struct VO2TrendView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .month, count: 2)) { _ in
+                    AxisMarks(values: xAxisStride) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.caption2)
+                        AxisValueLabel(format: xAxisFormat).font(.caption2)
                     }
                 }
                 .frame(height: 160).clipped()
@@ -218,5 +277,31 @@ struct VO2TrendView: View {
                     .foregroundStyle(.tertiary)
             }
         }
+    }
+
+    private var xAxisStride: AxisMarkValues {
+        lookback == .thisYear
+            ? .stride(by: .month, count: 2)
+            : .stride(by: .year, count: 1)
+    }
+
+    private var xAxisFormat: Date.FormatStyle {
+        lookback == .thisYear
+            ? .dateTime.month(.abbreviated)
+            : .dateTime.year()
+    }
+}
+
+// MARK: - Shared picker
+
+private struct LookbackPicker: View {
+    @Binding var selection: Lookback
+
+    var body: some View {
+        Picker("Lookback", selection: $selection) {
+            ForEach(Lookback.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .padding(.bottom, 8)
     }
 }

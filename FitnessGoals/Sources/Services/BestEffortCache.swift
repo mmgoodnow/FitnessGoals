@@ -6,13 +6,21 @@ import Foundation
 final class BestEffortCache {
     static let shared = BestEffortCache()
 
+    /// Bump this whenever the set of target distances changes — invalidates all cached entries.
+    static let currentVersion = 2
+
+    private struct Payload: Codable {
+        var version: Int
+        var splits: [String: [String: Double]]
+    }
+
     // [workoutUUID: [distanceID: seconds]]
     private var store: [String: [String: Double]] = [:]
     private let fileURL: URL
 
     private init() {
         let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        fileURL = dir.appendingPathComponent("best_effort_cache.json")
+        fileURL = dir.appendingPathComponent("best_effort_cache_v2.json")
         load()
     }
 
@@ -42,13 +50,15 @@ final class BestEffortCache {
 
     private func load() {
         guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode([String: [String: Double]].self, from: data)
-        else { return }
-        store = decoded
+              let payload = try? JSONDecoder().decode(Payload.self, from: data),
+              payload.version == Self.currentVersion
+        else { return }  // wrong version → start fresh
+        store = payload.splits
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(store) else { return }
+        let payload = Payload(version: Self.currentVersion, splits: store)
+        guard let data = try? JSONEncoder().encode(payload) else { return }
         try? data.write(to: fileURL, options: .atomic)
     }
 }

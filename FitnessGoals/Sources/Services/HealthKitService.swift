@@ -254,25 +254,23 @@ class HealthKitService: ObservableObject {
 
         var results: [Double: TimeInterval] = [:]
         for targetDist in distances {
-            // Require route to cover at least 95% of target distance with GPS points.
-            // If the speed filter dropped many points the cumulative distance will be
-            // much shorter than the workout distance, making scaled times unreliable.
-            guard totalDist >= targetDist * 0.95 else { continue }
+            guard totalDist >= targetDist else { continue }
             var best: TimeInterval = .infinity
             var left = 0
+            // For each right, shrink from the left to the *smallest* window that still
+            // covers targetDist. We only ever measure windows that genuinely span the
+            // full distance — never extrapolate a short segment up to the target.
             for right in 1 ..< locations.count {
-                // Advance left until window is just under targetDist
-                while cumDist[right] - cumDist[left] > targetDist {
+                while left + 1 < right, cumDist[right] - cumDist[left + 1] >= targetDist {
                     left += 1
                 }
                 let windowDist = cumDist[right] - cumDist[left]
-                if windowDist > 0 {
-                    let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
-                    guard windowTime > 1 else { continue }  // skip zero/negative timestamps
-                    // Scale to exact target distance
-                    let scaledTime = windowTime * (targetDist / windowDist)
-                    if scaledTime > 1 && scaledTime < best { best = scaledTime }
-                }
+                guard windowDist >= targetDist else { continue }
+                let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
+                guard windowTime > 1 else { continue }
+                // Scale down from the (slightly-over) window to exactly targetDist.
+                let scaledTime = windowTime * (targetDist / windowDist)
+                if scaledTime < best { best = scaledTime }
             }
             if best < .infinity { results[targetDist] = best }
         }
@@ -285,20 +283,20 @@ class HealthKitService: ObservableObject {
         for i in 1 ..< locations.count {
             cumDist[i] = cumDist[i - 1] + locations[i].distance(from: locations[i - 1])
         }
-        guard (cumDist.last ?? 0) >= targetDist * 0.95 else { return [] }
+        guard (cumDist.last ?? 0) >= targetDist else { return [] }
 
         var bestTime: TimeInterval = .infinity
         var bestLeft = 0, bestRight = 0
         var left = 0
 
         for right in 1 ..< locations.count {
-            while cumDist[right] - cumDist[left] > targetDist { left += 1 }
+            while left + 1 < right, cumDist[right] - cumDist[left + 1] >= targetDist { left += 1 }
             let windowDist = cumDist[right] - cumDist[left]
-            guard windowDist > 0 else { continue }
+            guard windowDist >= targetDist else { continue }
             let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
             guard windowTime > 1 else { continue }
             let scaledTime = windowTime * (targetDist / windowDist)
-            if scaledTime > 1 && scaledTime < bestTime {
+            if scaledTime < bestTime {
                 bestTime = scaledTime
                 bestLeft = left
                 bestRight = right

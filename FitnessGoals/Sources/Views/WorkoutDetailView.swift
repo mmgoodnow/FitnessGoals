@@ -32,107 +32,56 @@ struct WorkoutDetailView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Map section
-                Section {
-                    ZStack {
-                        if routeData.coordinates.count > 1 {
-                            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: highlightCoords)
-                                .frame(height: 220)
-                                .listRowInsets(EdgeInsets())
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        } else if loadingRoute {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.secondary.opacity(0.1))
-                                .frame(height: 220)
-                                .overlay {
-                                    ProgressView()
-                                }
-                        } else {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.secondary.opacity(0.1))
-                                .frame(height: 80)
-                                .overlay {
-                                    Label("No route data", systemImage: "map.slash")
-                                        .foregroundStyle(.secondary)
-                                        .font(.caption)
-                                }
+            VStack(spacing: 0) {
+                // Pinned map header — stays visible while the list scrolls.
+                mapHeader
+                    .frame(height: 240)
+
+                List {
+                    if !splitRows.isEmpty {
+                        Section {
+                            ForEach(splitRows) { dist in
+                                splitRow(dist)
+                            }
+                        } header: {
+                            Text("Best Efforts")
+                        } footer: {
+                            Text("Tap a distance to highlight its fastest segment on the map.")
                         }
                     }
-                }
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 
-                Section("Workout") {
-                    if let w = workout {
-                        DetailRow(label: "Date", value: w.startDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
-                        DetailRow(label: "Time", value: w.startDate.formatted(.dateTime.hour().minute()))
-                        DetailRow(label: "Distance", value: Formatters.formatMiles(w.distance))
-                        DetailRow(label: "Duration", value: Formatters.formatDuration(w.duration))
-                        if let spm = w.paceSecondsPerMeter {
-                            DetailRow(label: "Avg Pace", value: Formatters.formatPace(spm))
-                        }
-                        if let hr = w.avgHeartRate {
-                            DetailRow(label: "Avg Heart Rate", value: String(format: "%.0f bpm", hr))
-                        }
-                    }
-                }
-
-                if !splitRows.isEmpty {
-                    Section {
-                        ForEach(splitRows) { dist in
-                            let time = routeData.splitsByDistance[dist.meters] ?? 0
-                            let isSelected = selectedDistance == dist.meters
-                            let ranking = vm.rank(forSplit: time, distanceID: dist.id)
-                            Button {
-                                selectedDistance = dist.meters
-                            } label: {
-                                HStack {
-                                    Image(systemName: isSelected ? "mappin.circle.fill" : "circle")
-                                        .foregroundStyle(isSelected ? .yellow : .secondary)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(dist.label)
-                                            .foregroundStyle(.primary)
-                                        if let ranking {
-                                            Text("\(ordinal(ranking.rank)) fastest of \(ranking.total)")
-                                                .font(.caption2)
-                                                .foregroundStyle(ranking.rank == 1 ? .yellow : .secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    VStack(alignment: .trailing, spacing: 2) {
-                                        Text(formatTime(time))
-                                            .font(.system(.body, design: .monospaced).weight(.semibold))
-                                            .foregroundStyle(isSelected ? .yellow : .primary)
-                                        Text(formatPace(time, meters: dist.meters))
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
+                    Section("Workout") {
+                        if let w = workout {
+                            DetailRow(label: "Date", value: w.startDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
+                            DetailRow(label: "Time", value: w.startDate.formatted(.dateTime.hour().minute()))
+                            DetailRow(label: "Distance", value: Formatters.formatMiles(w.distance))
+                            DetailRow(label: "Duration", value: Formatters.formatDuration(w.duration))
+                            if let spm = w.paceSecondsPerMeter {
+                                DetailRow(label: "Avg Pace", value: Formatters.formatPace(spm))
+                            }
+                            if let hr = w.avgHeartRate {
+                                DetailRow(label: "Avg Heart Rate", value: String(format: "%.0f bpm", hr))
                             }
                         }
-                    } header: {
-                        Text("Best Efforts")
-                    } footer: {
-                        Text("Tap a distance to highlight its fastest segment on the map.")
                     }
-                }
 
-                Section {
-                    Button(role: isExcluded ? nil : .destructive) {
-                        vm.toggleExcluded(workoutID)
-                        dismiss()
-                    } label: {
-                        Label(
-                            isExcluded ? "Remove Exclusion" : "Exclude from Best Efforts",
-                            systemImage: isExcluded ? "checkmark.circle" : "xmark.circle"
-                        )
-                    }
-                    .foregroundStyle(isExcluded ? .green : .red)
-                } footer: {
-                    if isExcluded {
-                        Text("This workout is currently excluded from best effort calculations.")
-                    } else {
-                        Text("Excludes this workout from best effort calculations. Useful for GPS artifacts or accidental recordings.")
+                    Section {
+                        Button(role: isExcluded ? nil : .destructive) {
+                            vm.toggleExcluded(workoutID)
+                            dismiss()
+                        } label: {
+                            Label(
+                                isExcluded ? "Remove Exclusion" : "Exclude from Best Efforts",
+                                systemImage: isExcluded ? "checkmark.circle" : "xmark.circle"
+                            )
+                        }
+                        .foregroundStyle(isExcluded ? .green : .red)
+                    } footer: {
+                        if isExcluded {
+                            Text("This workout is currently excluded from best effort calculations.")
+                        } else {
+                            Text("Excludes this workout from best effort calculations. Useful for GPS artifacts or accidental recordings.")
+                        }
                     }
                 }
             }
@@ -148,6 +97,58 @@ struct WorkoutDetailView: View {
                 // Default-select the longest qualifying distance (most meaningful effort).
                 selectedDistance = splitRows.last?.meters
                 loadingRoute = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mapHeader: some View {
+        if routeData.coordinates.count > 1 {
+            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: highlightCoords)
+        } else if loadingRoute {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.1))
+                .overlay { ProgressView() }
+        } else {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.1))
+                .overlay {
+                    Label("No route data", systemImage: "map.slash")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private func splitRow(_ dist: DashboardViewModel.BestEffortDistance) -> some View {
+        let time = routeData.splitsByDistance[dist.meters] ?? 0
+        let isSelected = selectedDistance == dist.meters
+        let ranking = vm.rank(forSplit: time, distanceID: dist.id)
+        Button {
+            selectedDistance = dist.meters
+        } label: {
+            HStack {
+                Image(systemName: isSelected ? "mappin.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? .yellow : .secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(dist.label)
+                        .foregroundStyle(.primary)
+                    if let ranking {
+                        Text("\(ordinal(ranking.rank)) fastest of \(ranking.total)")
+                            .font(.caption2)
+                            .foregroundStyle(ranking.rank == 1 ? .yellow : .secondary)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(formatTime(time))
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(isSelected ? .yellow : .primary)
+                    Text(formatPace(time, meters: dist.meters))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

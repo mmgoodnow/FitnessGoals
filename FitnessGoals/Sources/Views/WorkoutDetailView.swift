@@ -87,8 +87,6 @@ struct WorkoutDetailView: View {
         }
         .task {
             routeData = await vm.fetchFullRouteData(for: workoutID)
-            // Default-select the longest qualifying distance (most meaningful effort).
-            selectedDistance = splitRows.last?.meters
             loadingRoute = false
         }
     }
@@ -119,7 +117,8 @@ struct WorkoutDetailView: View {
         let isSelected = selectedDistance == dist.meters
         let ranking = vm.rank(forSplit: time, distanceID: dist.id)
         Button {
-            selectedDistance = dist.meters
+            // Tapping the selected row deselects it (clears the map highlight).
+            selectedDistance = isSelected ? nil : dist.meters
         } label: {
             HStack {
                 Image(systemName: isSelected ? "mappin.circle.fill" : "circle")

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecentWorkoutsView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var selectedWorkout: WorkoutDetailTarget? = nil
 
     private var recent: [Workout] { Array(vm.workouts.prefix(10)) }
 
@@ -14,13 +15,23 @@ struct RecentWorkoutsView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(recent.enumerated()), id: \.element.id) { idx, workout in
-                        WorkoutRow(workout: workout, sport: vm.sport)
+                        Button {
+                            selectedWorkout = WorkoutDetailTarget(id: workout.id)
+                        } label: {
+                            WorkoutRow(workout: workout, sport: vm.sport)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                         if idx < recent.count - 1 {
                             Divider().padding(.leading, 0)
                         }
                     }
                 }
             }
+        }
+        .sheet(item: $selectedWorkout) { target in
+            WorkoutDetailView(workoutID: target.id)
+                .environmentObject(vm)
         }
     }
 }

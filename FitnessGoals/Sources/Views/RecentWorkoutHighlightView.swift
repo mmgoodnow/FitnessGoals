@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecentWorkoutHighlightView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var selectedWorkout: WorkoutDetailTarget? = nil
 
     var body: some View {
         if let w = vm.mostRecentWorkout {
@@ -58,6 +59,14 @@ struct RecentWorkoutHighlightView: View {
                         }
                     }
                 }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedWorkout = WorkoutDetailTarget(id: w.id)
+            }
+            .sheet(item: $selectedWorkout) { target in
+                WorkoutDetailView(workoutID: target.id)
+                    .environmentObject(vm)
             }
         }
     }

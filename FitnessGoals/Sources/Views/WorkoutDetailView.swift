@@ -2,6 +2,11 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
+/// Wraps a workout UUID so it can drive a `.sheet(item:)` presentation.
+struct WorkoutDetailTarget: Identifiable {
+    let id: UUID
+}
+
 struct WorkoutDetailView: View {
     @EnvironmentObject var vm: DashboardViewModel
     @Environment(\.dismiss) private var dismiss

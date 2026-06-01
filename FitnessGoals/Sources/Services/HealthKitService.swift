@@ -304,7 +304,7 @@ class HealthKitService: ObservableObject {
                 bestRight = right
             }
         }
-        guard bestTime < .infinity else { return [] }
+        guard bestTime < .infinity, bestRight > bestLeft else { return [] }
         return Array(locations[bestLeft ... bestRight])
     }
 }

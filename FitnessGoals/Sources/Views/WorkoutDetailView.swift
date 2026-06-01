@@ -159,9 +159,15 @@ struct RouteMapView: UIViewRepresentable {
             map.addAnnotation(splitEnd)
         }
 
-        // Fit to full route
-        let rect = fullLine.boundingMapRect
-        map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 32, left: 32, bottom: 32, right: 32), animated: false)
+        // Fit to split if available, otherwise full route
+        let fitRect: MKMapRect
+        if splitCoordinates.count > 1 {
+            let splitLine = MKPolyline(coordinates: splitCoordinates, count: splitCoordinates.count)
+            fitRect = splitLine.boundingMapRect
+        } else {
+            fitRect = fullLine.boundingMapRect
+        }
+        map.setVisibleMapRect(fitRect, edgePadding: UIEdgeInsets(top: 48, left: 48, bottom: 48, right: 48), animated: false)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }

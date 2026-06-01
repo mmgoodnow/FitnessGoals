@@ -431,6 +431,15 @@ static let bestEffortDistances: [BestEffortDistance] = [
         return all.first { $0.id == id }
     }
 
+    /// Rank of `time` among all recorded splits at `distanceID` (1 = fastest), plus the total count.
+    /// Uses the progression list, which already excludes opted-out workouts.
+    func rank(forSplit time: TimeInterval, distanceID: String) -> (rank: Int, total: Int)? {
+        guard let points = bestEffortProgressions[distanceID], !points.isEmpty else { return nil }
+        let times = points.map { $0.time }
+        let faster = times.filter { $0 < time }.count
+        return (faster + 1, times.count)
+    }
+
     // MARK: - Max HR estimation
 
     var estimatedMaxHR: Double {

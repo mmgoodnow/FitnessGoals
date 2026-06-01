@@ -60,6 +60,7 @@ struct WorkoutDetailView: View {
                 Section("Workout") {
                     if let w = workout {
                         DetailRow(label: "Date", value: w.startDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
+                        DetailRow(label: "Time", value: w.startDate.formatted(.dateTime.hour().minute()))
                         DetailRow(label: "Distance", value: Formatters.formatMiles(w.distance))
                         DetailRow(label: "Duration", value: Formatters.formatDuration(w.duration))
                         if let spm = w.paceSecondsPerMeter {
@@ -76,22 +77,31 @@ struct WorkoutDetailView: View {
                         ForEach(splitRows) { dist in
                             let time = routeData.splitsByDistance[dist.meters] ?? 0
                             let isSelected = selectedDistance == dist.meters
+                            let ranking = vm.rank(forSplit: time, distanceID: dist.id)
                             Button {
                                 selectedDistance = dist.meters
                             } label: {
                                 HStack {
                                     Image(systemName: isSelected ? "mappin.circle.fill" : "circle")
                                         .foregroundStyle(isSelected ? .yellow : .secondary)
-                                    Text(dist.label)
-                                        .foregroundStyle(.primary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(dist.label)
+                                            .foregroundStyle(.primary)
+                                        if let ranking {
+                                            Text("\(ordinal(ranking.rank)) fastest of \(ranking.total)")
+                                                .font(.caption2)
+                                                .foregroundStyle(ranking.rank == 1 ? .yellow : .secondary)
+                                        }
+                                    }
                                     Spacer()
-                                    Text(formatTime(time))
-                                        .font(.system(.body, design: .monospaced).weight(.semibold))
-                                        .foregroundStyle(isSelected ? .yellow : .primary)
-                                    Text(formatPace(time, meters: dist.meters))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 70, alignment: .trailing)
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(formatTime(time))
+                                            .font(.system(.body, design: .monospaced).weight(.semibold))
+                                            .foregroundStyle(isSelected ? .yellow : .primary)
+                                        Text(formatPace(time, meters: dist.meters))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
@@ -236,6 +246,18 @@ struct RouteMapView: UIViewRepresentable {
 }
 
 // MARK: - Helpers
+
+private func ordinal(_ n: Int) -> String {
+    let suffix: String
+    switch (n % 100, n % 10) {
+    case (11, _), (12, _), (13, _): suffix = "th"
+    case (_, 1): suffix = "st"
+    case (_, 2): suffix = "nd"
+    case (_, 3): suffix = "rd"
+    default: suffix = "th"
+    }
+    return "\(n)\(suffix)"
+}
 
 private struct DetailRow: View {
     let label: String

@@ -270,6 +270,17 @@ class DashboardViewModel: ObservableObject {
         let meters: Double
     }
 
+    /// Minimum plausible finish time (seconds) per distance — efforts faster than this are discarded as GPS artifacts.
+    static let minimumPlausibleTime: [String: TimeInterval] = [
+        "400m": 75,    // 1:15
+        "800m": 165,   // 2:45
+        "1mi":  360,   // 6:00
+        "5k":   1200,  // 20:00
+        "10k":  2400,  // 40:00
+        "half": 5400,  // 1:30:00
+        "full": 10800, // 3:00:00
+    ]
+
     static let bestEffortDistances: [BestEffortDistance] = [
         .init(id: "400m",  label: "400m",         meters: 400),
         .init(id: "800m",  label: "800m",         meters: 800),
@@ -365,7 +376,8 @@ class DashboardViewModel: ObservableObject {
             var points: [BestEffortPoint] = []
 
             for w in allWorkouts {
-                guard let t = allSplits[w.id]?[dist.meters] else { continue }
+                guard let t = allSplits[w.id]?[dist.meters],
+                      t >= Self.minimumPlausibleTime[dist.id] ?? 0 else { continue }
                 let isBest = t < runningBest
                 if isBest {
                     runningBest = t

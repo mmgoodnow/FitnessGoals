@@ -239,7 +239,7 @@ class HealthKitService: ObservableObject {
             store.execute(query)
         }
         locations.sort { $0.timestamp < $1.timestamp }
-        return filterSuperspeedPoints(locations, maxSpeedMS: 10.0)
+        return locations
     }
 
     /// Removes points where the speed from the previous retained point exceeds maxSpeedMS.
@@ -272,7 +272,10 @@ class HealthKitService: ObservableObject {
 
         var results: [Double: TimeInterval] = [:]
         for targetDist in distances {
-            guard totalDist >= targetDist else { continue }
+            // Require route to cover at least 95% of target distance with GPS points.
+            // If the speed filter dropped many points the cumulative distance will be
+            // much shorter than the workout distance, making scaled times unreliable.
+            guard totalDist >= targetDist * 0.95 else { continue }
             var best: TimeInterval = .infinity
             var left = 0
             for right in 1 ..< locations.count {
@@ -300,7 +303,7 @@ class HealthKitService: ObservableObject {
         for i in 1 ..< locations.count {
             cumDist[i] = cumDist[i - 1] + locations[i].distance(from: locations[i - 1])
         }
-        guard (cumDist.last ?? 0) >= targetDist else { return [] }
+        guard (cumDist.last ?? 0) >= targetDist * 0.95 else { return [] }
 
         var bestTime: TimeInterval = .infinity
         var bestLeft = 0, bestRight = 0

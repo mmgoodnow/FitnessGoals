@@ -241,7 +241,7 @@ struct RouteMapView: UIViewRepresentable {
             case "Split Start":
                 view.image = Self.dotImage(color: .systemGreen)
             case "Split End":
-                view.image = Self.dotImage(color: .systemRed, checkered: true)
+                view.image = Self.dotImage(color: .black, checkered: true)
             default:
                 view.image = Self.dotImage(color: .systemBlue)
             }

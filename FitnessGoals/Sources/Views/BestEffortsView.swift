@@ -128,13 +128,8 @@ struct BestEffortsView: View {
                     }
                     .frame(height: 140).clipped()
                     .sheet(item: $tappedPoint) { pt in
-                        let dist = DashboardViewModel.bestEffortDistances.first { $0.id == selectedDistanceID }
-                        WorkoutDetailView(
-                            point: pt,
-                            distanceLabel: dist?.label ?? selectedDistanceID,
-                            distanceMeters: dist?.meters ?? 0
-                        )
-                        .environmentObject(vm)
+                        WorkoutDetailView(workoutID: pt.id)
+                            .environmentObject(vm)
                     }
                 }
             } else if !vm.bestEffortsLoading {

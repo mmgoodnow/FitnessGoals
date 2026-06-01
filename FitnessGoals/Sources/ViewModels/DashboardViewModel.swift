@@ -417,12 +417,13 @@ static let bestEffortDistances: [BestEffortDistance] = [
         workouts.max(by: { $0.startDate < $1.startDate })
     }
 
-    func fetchRouteData(for workoutID: UUID, highlightDistance: Double? = nil) async -> HealthKitService.RouteData {
+    func fetchFullRouteData(for workoutID: UUID) async -> HealthKitService.FullRouteData {
         let hkWorkouts = await fetchAllRunningHKWorkouts()
         guard let hk = hkWorkouts.first(where: { $0.uuid == workoutID }) else {
-            return HealthKitService.RouteData(coordinates: [], bestSplitCoordinates: [])
+            return HealthKitService.FullRouteData(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:])
         }
-        return await healthKit.fetchRouteData(for: hk, highlightDistance: highlightDistance)
+        let distances = Self.bestEffortDistances.map { $0.meters }
+        return await healthKit.fetchFullRouteData(for: hk, distances: distances)
     }
 
     func workout(for id: UUID) -> Workout? {

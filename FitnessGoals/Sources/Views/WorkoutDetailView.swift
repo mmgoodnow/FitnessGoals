@@ -6,15 +6,24 @@ struct WorkoutDetailView: View {
     @EnvironmentObject var vm: DashboardViewModel
     @Environment(\.dismiss) private var dismiss
 
-    let point: DashboardViewModel.BestEffortPoint
-    let distanceLabel: String
-    let distanceMeters: Double
+    let workoutID: UUID
 
-    @State private var routeData: HealthKitService.RouteData = .init(coordinates: [], bestSplitCoordinates: [])
+    @State private var routeData: HealthKitService.FullRouteData = .init(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:])
     @State private var loadingRoute = true
+    @State private var selectedDistance: Double? = nil
 
-    private var workout: Workout? { vm.workout(for: point.id) }
-    private var isExcluded: Bool { vm.excludedWorkoutIDs.contains(point.id) }
+    private var workout: Workout? { vm.workout(for: workoutID) }
+    private var isExcluded: Bool { vm.excludedWorkoutIDs.contains(workoutID) }
+
+    /// Qualifying distances for this workout, in ascending order.
+    private var splitRows: [DashboardViewModel.BestEffortDistance] {
+        DashboardViewModel.bestEffortDistances.filter { routeData.splitsByDistance[$0.meters] != nil }
+    }
+
+    private var highlightCoords: [CLLocationCoordinate2D] {
+        guard let d = selectedDistance else { return [] }
+        return routeData.segmentsByDistance[d] ?? []
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,7 +32,7 @@ struct WorkoutDetailView: View {
                 Section {
                     ZStack {
                         if routeData.coordinates.count > 1 {
-                            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: routeData.bestSplitCoordinates)
+                            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: highlightCoords)
                                 .frame(height: 220)
                                 .listRowInsets(EdgeInsets())
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -49,8 +58,8 @@ struct WorkoutDetailView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 
                 Section("Workout") {
-                    DetailRow(label: "Date", value: point.date.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
                     if let w = workout {
+                        DetailRow(label: "Date", value: w.startDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
                         DetailRow(label: "Distance", value: Formatters.formatMiles(w.distance))
                         DetailRow(label: "Duration", value: Formatters.formatDuration(w.duration))
                         if let spm = w.paceSecondsPerMeter {
@@ -62,21 +71,40 @@ struct WorkoutDetailView: View {
                     }
                 }
 
-                Section("Best Effort") {
-                    HStack {
-                        Text(distanceLabel + " Split")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(formatTime(point.time))
-                            .font(.system(.body, design: .monospaced).weight(.semibold))
-                            .foregroundStyle(.yellow)
+                if !splitRows.isEmpty {
+                    Section {
+                        ForEach(splitRows) { dist in
+                            let time = routeData.splitsByDistance[dist.meters] ?? 0
+                            let isSelected = selectedDistance == dist.meters
+                            Button {
+                                selectedDistance = dist.meters
+                            } label: {
+                                HStack {
+                                    Image(systemName: isSelected ? "mappin.circle.fill" : "circle")
+                                        .foregroundStyle(isSelected ? .yellow : .secondary)
+                                    Text(dist.label)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(formatTime(time))
+                                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                                        .foregroundStyle(isSelected ? .yellow : .primary)
+                                    Text(formatPace(time, meters: dist.meters))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 70, alignment: .trailing)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Best Efforts")
+                    } footer: {
+                        Text("Tap a distance to highlight its fastest segment on the map.")
                     }
-                    DetailRow(label: "Pace", value: formatPace(point.time, meters: distanceMeters))
                 }
 
                 Section {
                     Button(role: isExcluded ? nil : .destructive) {
-                        vm.toggleExcluded(point.id)
+                        vm.toggleExcluded(workoutID)
                         dismiss()
                     } label: {
                         Label(
@@ -101,7 +129,9 @@ struct WorkoutDetailView: View {
                 }
             }
             .task {
-                routeData = await vm.fetchRouteData(for: point.id, highlightDistance: distanceMeters)
+                routeData = await vm.fetchFullRouteData(for: workoutID)
+                // Default-select the longest qualifying distance (most meaningful effort).
+                selectedDistance = splitRows.last?.meters
                 loadingRoute = false
             }
         }

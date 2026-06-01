@@ -183,20 +183,29 @@ class HealthKitService: ObservableObject {
 
     // MARK: - Route-based best effort splits
 
-    struct RouteData {
+    struct FullRouteData {
         let coordinates: [CLLocationCoordinate2D]
-        let bestSplitCoordinates: [CLLocationCoordinate2D]  // empty if no target distance
+        // [distanceMeters: best-split segment coordinates], one entry per qualifying distance
+        let segmentsByDistance: [Double: [CLLocationCoordinate2D]]
+        // [distanceMeters: split seconds]
+        let splitsByDistance: [Double: TimeInterval]
     }
 
-    /// Fetches route coordinates and optionally the best-split segment for a given distance.
-    func fetchRouteData(for hkWorkout: HKWorkout, highlightDistance: Double? = nil) async -> RouteData {
+    /// Fetches the route once and computes split times + highlight segments for every
+    /// distance the workout covers. Lets the detail view switch highlights without refetching.
+    func fetchFullRouteData(for hkWorkout: HKWorkout, distances: [Double]) async -> FullRouteData {
         let locations = (try? await fetchFilteredLocations(for: hkWorkout)) ?? []
         let coords = locations.map { $0.coordinate }
-        guard let targetDist = highlightDistance, locations.count >= 2 else {
-            return RouteData(coordinates: coords, bestSplitCoordinates: [])
+        guard locations.count >= 2 else {
+            return FullRouteData(coordinates: coords, segmentsByDistance: [:], splitsByDistance: [:])
         }
-        let segment = bestSplitSegment(locations: locations, distance: targetDist)
-        return RouteData(coordinates: coords, bestSplitCoordinates: segment.map { $0.coordinate })
+        let splits = bestSplits(locations: locations, distances: distances)
+        var segments: [Double: [CLLocationCoordinate2D]] = [:]
+        for dist in distances where splits[dist] != nil {
+            let segment = bestSplitSegment(locations: locations, distance: dist)
+            if segment.count > 1 { segments[dist] = segment.map { $0.coordinate } }
+        }
+        return FullRouteData(coordinates: coords, segmentsByDistance: segments, splitsByDistance: splits)
     }
 
     /// Returns best split time (seconds) for each requested distance (meters),

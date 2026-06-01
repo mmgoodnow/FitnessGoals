@@ -7,7 +7,7 @@ final class BestEffortCache {
     static let shared = BestEffortCache()
 
     /// Bump this whenever the set of target distances changes — invalidates all cached entries.
-    static let currentVersion = 2
+    static let currentVersion = 3
 
     private struct Payload: Codable {
         var version: Int

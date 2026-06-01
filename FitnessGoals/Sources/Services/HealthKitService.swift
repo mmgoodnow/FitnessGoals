@@ -222,8 +222,31 @@ class HealthKitService: ObservableObject {
         // Sort by timestamp (should already be sorted, but be safe)
         locations.sort { $0.timestamp < $1.timestamp }
 
+        // Filter out GPS points that imply superhuman speed between consecutive samples.
+        // 10 m/s ≈ 6:26/mi — faster than any human road race record.
+        let filtered = filterSuperspeedPoints(locations, maxSpeedMS: 10.0)
+
         // 3. Sliding window: for each target distance find the fastest window
-        return bestSplits(locations: locations, distances: distances)
+        return bestSplits(locations: filtered, distances: distances)
+    }
+
+    /// Removes points where the speed from the previous retained point exceeds maxSpeedMS.
+    /// Uses a greedy forward pass — if a point is too fast, drop it and check the next.
+    private func filterSuperspeedPoints(_ locations: [CLLocation], maxSpeedMS: Double) -> [CLLocation] {
+        guard !locations.isEmpty else { return [] }
+        var result: [CLLocation] = [locations[0]]
+        for loc in locations.dropFirst() {
+            let prev = result.last!
+            let dt = loc.timestamp.timeIntervalSince(prev.timestamp)
+            let dist = loc.distance(from: prev)
+            guard dt > 0 else { continue }
+            let speed = dist / dt
+            if speed <= maxSpeedMS {
+                result.append(loc)
+            }
+            // else: drop this point — it implies car/teleport speed
+        }
+        return result
     }
 
     /// Pure computation — walks locations with a two-pointer sliding window.

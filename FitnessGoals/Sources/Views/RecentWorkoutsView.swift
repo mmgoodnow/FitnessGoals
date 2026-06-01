@@ -18,7 +18,7 @@ struct RecentWorkoutsView: View {
                         Button {
                             selectedWorkout = WorkoutDetailTarget(id: workout.id)
                         } label: {
-                            WorkoutRow(workout: workout, sport: vm.sport)
+                            WorkoutRow(workout: workout)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -38,7 +38,6 @@ struct RecentWorkoutsView: View {
 
 struct WorkoutRow: View {
     let workout: Workout
-    let sport: SportType
 
     private var dateStr: String {
         workout.startDate.formatted(.dateTime.month(.abbreviated).day().weekday(.abbreviated))
@@ -48,7 +47,7 @@ struct WorkoutRow: View {
 
     private var paceStr: String {
         guard let spm = workout.paceSecondsPerMeter else { return "—" }
-        return sport.usesPace ? Formatters.formatPace(spm) : Formatters.formatSpeed(spm)
+        return Formatters.formatPace(spm)
     }
 
     private var hrStr: String? {

@@ -41,8 +41,8 @@ struct RecentWorkoutHighlightView: View {
                         HStack(spacing: 0) {
                             if let spm = w.paceSecondsPerMeter {
                                 HighlightStat(
-                                    label: vm.sport.usesPace ? "Pace" : "Speed",
-                                    value: vm.sport.usesPace ? Formatters.formatPace(spm) : Formatters.formatSpeed(spm),
+                                    label: "Pace",
+                                    value: Formatters.formatPace(spm),
                                     icon: "speedometer"
                                 )
                             }

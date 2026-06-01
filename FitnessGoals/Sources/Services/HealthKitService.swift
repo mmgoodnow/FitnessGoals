@@ -8,11 +8,10 @@ class HealthKitService: ObservableObject {
 
     var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
-    func requestAuthorization(for sport: SportType) async throws {
+    func requestAuthorization() async throws {
         let readTypes: Set<HKObjectType> = [
             HKObjectType.workoutType(),
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKObjectType.quantityType(forIdentifier: .distanceCycling)!,
             HKObjectType.quantityType(forIdentifier: .heartRate)!,
             HKSeriesType.workoutRoute(),
         ]
@@ -20,7 +19,7 @@ class HealthKitService: ObservableObject {
     }
 
     /// Returns raw HKWorkout objects (no HR enrichment) — used for route queries.
-    func fetchHKWorkouts(sport: SportType, year: Int) async throws -> [HKWorkout] {
+    func fetchHKWorkouts(year: Int) async throws -> [HKWorkout] {
         let calendar = Calendar.current
         var startComps = DateComponents()
         startComps.year = year; startComps.month = 1; startComps.day = 1
@@ -29,7 +28,7 @@ class HealthKitService: ObservableObject {
         endComps.year = year + 1; endComps.month = 1; endComps.day = 1
         let end = calendar.date(from: endComps)!
         let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForWorkouts(with: sport.hkWorkoutType),
+            HKQuery.predicateForWorkouts(with: .running),
             HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
         ])
         return try await withCheckedThrowingContinuation { continuation in
@@ -44,7 +43,7 @@ class HealthKitService: ObservableObject {
         }
     }
 
-    func fetchWorkouts(sport: SportType, year: Int) async throws -> [Workout] {
+    func fetchWorkouts(year: Int) async throws -> [Workout] {
         let calendar = Calendar.current
         var startComps = DateComponents()
         startComps.year = year; startComps.month = 1; startComps.day = 1
@@ -54,7 +53,7 @@ class HealthKitService: ObservableObject {
         let end = calendar.date(from: endComps)!
 
         let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForWorkouts(with: sport.hkWorkoutType),
+            HKQuery.predicateForWorkouts(with: .running),
             HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
         ])
 
@@ -124,10 +123,7 @@ class HealthKitService: ObservableObject {
         let workoutSamples: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
-                predicate: NSCompoundPredicate(orPredicateWithSubpredicates: [
-                    HKQuery.predicateForWorkouts(with: .running),
-                    HKQuery.predicateForWorkouts(with: .cycling),
-                ]),
+                predicate: HKQuery.predicateForWorkouts(with: .running),
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
             ) { _, samples, error in
@@ -173,10 +169,10 @@ class HealthKitService: ObservableObject {
         return result
     }
 
-    func fetchWorkoutsMultiYear(sport: SportType, years: [Int]) async throws -> [Int: [Workout]] {
+    func fetchWorkoutsMultiYear(years: [Int]) async throws -> [Int: [Workout]] {
         var result: [Int: [Workout]] = [:]
         for year in years {
-            result[year] = try await fetchWorkouts(sport: sport, year: year)
+            result[year] = try await fetchWorkouts(year: year)
         }
         return result
     }

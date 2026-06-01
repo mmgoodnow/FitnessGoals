@@ -8,10 +8,8 @@ struct RecordsView: View {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    if vm.sport.usesPace {
-                        BestEffortsView()
-                            .padding(.horizontal)
-                    }
+                    BestEffortsView()
+                        .padding(.horizontal)
                     RecentWorkoutsView()
                         .padding(.horizontal)
                 }

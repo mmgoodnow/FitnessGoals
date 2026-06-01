@@ -9,21 +9,8 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Sport") {
-                    Picker("Sport", selection: Binding(
-                        get: { vm.sport },
-                        set: { vm.changeSport($0) }
-                    )) {
-                        ForEach(SportType.allCases) { sport in
-                            Label(sport.rawValue, systemImage: sport.icon).tag(sport)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
-
                 Section("Yearly Goal") {
-                    ForEach(vm.sport.quickGoals, id: \.self) { goal in
+                    ForEach([100.0, 250, 500, 750, 1000], id: \.self) { goal in
                         Button {
                             vm.setGoal(goal)
                             showCustom = false

@@ -19,14 +19,12 @@ struct DashboardView: View {
                         .padding(.horizontal)
                     WeeklyChartView()
                         .padding(.horizontal)
-                    if vm.sport.usesPace {
-                        PaceTrendView()
-                            .padding(.horizontal)
-                        HeartRateTrendView()
-                            .padding(.horizontal)
-                        VO2TrendView()
-                            .padding(.horizontal)
-                    }
+                    PaceTrendView()
+                        .padding(.horizontal)
+                    HeartRateTrendView()
+                        .padding(.horizontal)
+                    VO2TrendView()
+                        .padding(.horizontal)
                     WeekdayFrequencyChartView()
                         .padding(.horizontal)
                     WeekdayDistanceChartView()
@@ -37,7 +35,7 @@ struct DashboardView: View {
                 .padding(.vertical, 12)
             }
         }
-        .navigationTitle(vm.sport.rawValue + " Goals")
+        .navigationTitle("Running Goals")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

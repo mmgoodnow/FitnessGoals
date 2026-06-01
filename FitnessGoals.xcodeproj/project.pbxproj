@@ -21,7 +21,6 @@
 		A014 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014 /* HealthKitService.swift */; };
 		A015 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015 /* Formatters.swift */; };
 		A016 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F016 /* Workout.swift */; };
-		A017 /* SportType.swift in Sources */ = {isa = PBXBuildFile; fileRef = F017 /* SportType.swift */; };
 		A018 /* GoalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F018 /* GoalSettings.swift */; };
 		A019 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F019 /* HealthKit.framework */; };
 		A020 /* TrendChartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F020 /* TrendChartsView.swift */; };
@@ -49,7 +48,6 @@
 		F014 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		F015 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		F016 /* Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workout.swift; sourceTree = "<group>"; };
-		F017 /* SportType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportType.swift; sourceTree = "<group>"; };
 		F018 /* GoalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettings.swift; sourceTree = "<group>"; };
 		F020 /* TrendChartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartsView.swift; sourceTree = "<group>"; };
 		F021 /* HRZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZone.swift; sourceTree = "<group>"; };
@@ -108,7 +106,6 @@
 			isa = PBXGroup;
 			children = (
 				F016 /* Workout.swift */,
-				F017 /* SportType.swift */,
 				F018 /* GoalSettings.swift */,
 				F021 /* HRZone.swift */,
 			);
@@ -265,7 +262,6 @@
 				A014 /* HealthKitService.swift in Sources */,
 				A015 /* Formatters.swift in Sources */,
 				A016 /* Workout.swift in Sources */,
-				A017 /* SportType.swift in Sources */,
 				A018 /* GoalSettings.swift in Sources */,
 				A020 /* TrendChartsView.swift in Sources */,
 				A021 /* HRZone.swift in Sources */,

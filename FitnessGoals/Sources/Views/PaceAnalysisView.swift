@@ -20,9 +20,8 @@ struct PaceAnalysisView: View {
     private var chartData: [(point: DashboardViewModel.YearPacePoint, yVal: Double)] {
         data.compactMap { p in
             guard let pace = p.avgPaceSecondsPerMeter else { return nil }
-            let raw = vm.sport.usesPace ? pace * 1609.344 / 60.0 : (1.0 / pace) * 2.23694
-            let y = vm.sport.usesPace ? -raw : raw
-            return (p, y)
+            let minPerMile = pace * 1609.344 / 60.0
+            return (p, -minPerMile)
         }
     }
 
@@ -36,7 +35,7 @@ struct PaceAnalysisView: View {
     }
 
     var body: some View {
-        CardView(title: "Year-over-Year \(vm.sport.usesPace ? "Pace" : "Speed")",
+        CardView(title: "Year-over-Year Pace",
                  systemImage: "chart.bar.xaxis",
                  accentColor: .blue) {
             VStack(alignment: .leading, spacing: 12) {
@@ -79,7 +78,7 @@ struct PaceAnalysisView: View {
 
                         BarMark(
                             x: .value("Year", String(item.point.year)),
-                            y: .value(vm.sport.usesPace ? "Min/mi" : "mph", item.yVal),
+                            y: .value("Min/mi", item.yVal),
                             width: .ratio(0.5)
                         )
                         .foregroundStyle(
@@ -91,15 +90,10 @@ struct PaceAnalysisView: View {
                         )
                         .cornerRadius(6)
                         .annotation(position: .top) {
-                            if vm.sport.usesPace {
-                                let pos = -item.yVal
-                                let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                                Text(String(format: "%d:%02d", m, s))
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            } else {
-                                Text(String(format: "%.1f", item.yVal))
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            }
+                            let pos = -item.yVal
+                            let m = Int(pos); let s = Int((pos - Double(m)) * 60)
+                            Text(String(format: "%d:%02d", m, s))
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                     .chartYScale(domain: domain)
@@ -108,13 +102,9 @@ struct PaceAnalysisView: View {
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             AxisValueLabel {
                                 if let v = val.as(Double.self) {
-                                    if vm.sport.usesPace {
-                                        let pos = -v
-                                        let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                                        Text(String(format: "%d:%02d", m, s)).font(.caption2)
-                                    } else {
-                                        Text(String(format: "%.1f", v)).font(.caption2)
-                                    }
+                                    let pos = -v
+                                    let m = Int(pos); let s = Int((pos - Double(m)) * 60)
+                                    Text(String(format: "%d:%02d", m, s)).font(.caption2)
                                 }
                             }
                         }

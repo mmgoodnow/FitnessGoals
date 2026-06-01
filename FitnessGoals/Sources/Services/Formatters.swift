@@ -16,13 +16,6 @@ enum Formatters {
         return String(format: "%d:%02d /mi", minutes, seconds)
     }
 
-    static func formatSpeed(_ secondsPerMeter: Double) -> String {
-        guard secondsPerMeter > 0 else { return "— mph" }
-        let metersPerSecond = 1.0 / secondsPerMeter
-        let mph = metersPerSecond * 2.23694
-        return String(format: "%.1f mph", mph)
-    }
-
     static func formatDuration(_ seconds: TimeInterval) -> String {
         let h = Int(seconds) / 3600
         let m = (Int(seconds) % 3600) / 60

@@ -9,7 +9,6 @@ class DashboardViewModel: ObservableObject {
     @Published var historicalWorkouts: [Int: [Workout]] = [:]
     @Published var isLoading = false
     @Published var error: String?
-    @Published var sport: SportType = .running
     @Published var yearlyGoalMiles: Double = 500
     @Published var hrPercentiles: [Double: HealthKitService.HRPercentileResult] = [:]
     @Published var selectedHRPercentile: Double = 0.999
@@ -57,14 +56,13 @@ class DashboardViewModel: ObservableObject {
     func loadSettings() {
         if let data = UserDefaults.standard.data(forKey: settingsKey),
            let settings = try? JSONDecoder().decode(GoalSettings.self, from: data) {
-            sport = SportType(rawValue: settings.sportType) ?? .running
             yearlyGoalMiles = settings.yearlyGoalMiles
             selectedHRPercentile = settings.hrPercentile
         }
     }
 
     func saveSettings() {
-        let settings = GoalSettings(sportType: sport.rawValue, yearlyGoalMiles: yearlyGoalMiles, hrPercentile: selectedHRPercentile)
+        let settings = GoalSettings(yearlyGoalMiles: yearlyGoalMiles, hrPercentile: selectedHRPercentile)
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: settingsKey)
         }
@@ -80,10 +78,10 @@ class DashboardViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
-            try await healthKit.requestAuthorization(for: sport)
-            async let current = healthKit.fetchWorkouts(sport: sport, year: currentYear)
+            try await healthKit.requestAuthorization()
+            async let current = healthKit.fetchWorkouts(year: currentYear)
             let years = (currentYear - 4 ..< currentYear).map { $0 }
-            async let historical = healthKit.fetchWorkoutsMultiYear(sport: sport, years: years)
+            async let historical = healthKit.fetchWorkoutsMultiYear(years: years)
             async let percentiles = healthKit.fetchWorkoutHRPercentiles([0.99, 0.999, 0.9999])
             workouts = try await current
             historicalWorkouts = try await historical
@@ -93,13 +91,6 @@ class DashboardViewModel: ObservableObject {
         }
         isLoading = false
         Task { await loadBestEfforts() }
-    }
-
-    func changeSport(_ newSport: SportType) {
-        sport = newSport
-        yearlyGoalMiles = newSport.defaultGoalMiles
-        saveSettings()
-        Task { await load() }
     }
 
     func setGoal(_ miles: Double) {
@@ -314,7 +305,6 @@ static let bestEffortDistances: [BestEffortDistance] = [
     /// Fetch route splits for all workouts, using cache where available.
     /// Updates bestEffortsByDistance and bestEffortProgressions as it goes.
     func loadBestEfforts() async {
-        guard sport == .running else { return }
         let allWorkouts = (historicalWorkouts.values.flatMap { $0 } + workouts)
             .filter { $0.distance >= Self.bestEffortDistances[0].meters }  // at least 400m
             .sorted { $0.startDate < $1.startDate }
@@ -405,7 +395,7 @@ static let bestEffortDistances: [BestEffortDistance] = [
         let years = Array((currentYear - 4) ... currentYear)
         var result: [HKWorkout] = []
         for year in years {
-            let ws = (try? await healthKit.fetchHKWorkouts(sport: .running, year: year)) ?? []
+            let ws = (try? await healthKit.fetchHKWorkouts(year: year)) ?? []
             result.append(contentsOf: ws)
         }
         return result

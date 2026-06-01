@@ -20,8 +20,10 @@ class DashboardViewModel: ObservableObject {
     @Published var bestEffortsByDistance: [String: BestEffort] = [:]
     // [distanceID: [BestEffortPoint]] sorted by date
     @Published var bestEffortProgressions: [String: [BestEffortPoint]] = [:]
+    @Published var excludedWorkoutIDs: Set<UUID> = []
 
     private let cache = BestEffortCache.shared
+    private let excludedKey = "excludedBestEffortWorkouts"
 
     private let healthKit = HealthKitService()
     private let currentYear = Calendar.current.component(.year, from: Date())
@@ -30,9 +32,26 @@ class DashboardViewModel: ObservableObject {
 
     init() {
         loadSettings()
+        loadExcludedWorkouts()
     }
 
     // MARK: - Settings persistence
+
+    func loadExcludedWorkouts() {
+        let strings = UserDefaults.standard.stringArray(forKey: excludedKey) ?? []
+        excludedWorkoutIDs = Set(strings.compactMap { UUID(uuidString: $0) })
+    }
+
+    func toggleExcluded(_ workoutID: UUID) {
+        if excludedWorkoutIDs.contains(workoutID) {
+            excludedWorkoutIDs.remove(workoutID)
+        } else {
+            excludedWorkoutIDs.insert(workoutID)
+        }
+        UserDefaults.standard.set(excludedWorkoutIDs.map { $0.uuidString }, forKey: excludedKey)
+        // Rebuild best efforts with new exclusion set
+        Task { await loadBestEfforts() }
+    }
 
     func loadSettings() {
         if let data = UserDefaults.standard.data(forKey: settingsKey),
@@ -377,7 +396,8 @@ class DashboardViewModel: ObservableObject {
 
             for w in allWorkouts {
                 guard let t = allSplits[w.id]?[dist.meters],
-                      t >= Self.minimumPlausibleTime[dist.id] ?? 0 else { continue }
+                      t >= Self.minimumPlausibleTime[dist.id] ?? 0,
+                      !excludedWorkoutIDs.contains(w.id) else { continue }
                 let isBest = t < runningBest
                 if isBest {
                     runningBest = t

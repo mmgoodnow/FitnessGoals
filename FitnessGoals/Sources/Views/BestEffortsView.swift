@@ -4,6 +4,7 @@ import Charts
 struct BestEffortsView: View {
     @EnvironmentObject var vm: DashboardViewModel
     @State private var selectedDistanceID: String = "5k"
+    @State private var tappedPoint: DashboardViewModel.BestEffortPoint? = nil
 
     private var efforts: [DashboardViewModel.BestEffort] {
         DashboardViewModel.bestEffortDistances.compactMap { vm.bestEffortsByDistance[$0.id] }
@@ -11,6 +12,10 @@ struct BestEffortsView: View {
 
     private var progression: [DashboardViewModel.BestEffortPoint] {
         vm.bestEffortProgressions[selectedDistanceID] ?? []
+    }
+
+    private var prs: [DashboardViewModel.BestEffortPoint] {
+        progression.filter { $0.isBest }
     }
 
     var body: some View {
@@ -72,41 +77,30 @@ struct BestEffortsView: View {
 
                 if progression.count > 1 {
                     Divider()
-                    Text("Progression")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 2)
+                    HStack {
+                        Text("Progression")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Text("Tap a PR dot to exclude")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
 
-                    let prs = progression.filter { $0.isBest }
                     let domain = progressionDomain(progression)
 
                     Chart {
                         ForEach(progression) { pt in
-                            PointMark(
-                                x: .value("Date", pt.date),
-                                y: .value("Time", pt.time)
-                            )
-                            .foregroundStyle(Color.yellow.opacity(0.25))
-                            .symbolSize(12)
+                            PointMark(x: .value("Date", pt.date), y: .value("Time", pt.time))
+                                .foregroundStyle(Color.yellow.opacity(0.25))
+                                .symbolSize(12)
                         }
                         ForEach(prs) { pt in
-                            LineMark(
-                                x: .value("Date", pt.date),
-                                y: .value("Time", pt.time)
-                            )
-                            .foregroundStyle(Color.yellow)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                            .interpolationMethod(.stepStart)
-
-                            PointMark(
-                                x: .value("Date", pt.date),
-                                y: .value("Time", pt.time)
-                            )
-                            .foregroundStyle(Color.yellow)
-                            .symbolSize(40)
+                            prLineContent(pt)
                         }
                     }
-                    .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
+                    .chartScrollableAxes([])
                     .chartYScale(domain: domain)
                     .chartYAxis {
                         AxisMarks(position: .trailing) { val in
@@ -124,13 +118,76 @@ struct BestEffortsView: View {
                             AxisValueLabel(format: .dateTime.year()).font(.caption2)
                         }
                     }
+                    .chartOverlay { proxy in
+                        GeometryReader { geo in
+                            Rectangle().fill(.clear).contentShape(Rectangle())
+                                .onTapGesture { location in
+                                    handleChartTap(location: location, proxy: proxy, geo: geo)
+                                }
+                        }
+                    }
                     .frame(height: 140).clipped()
+                    .confirmationDialog(
+                        tappedPoint.map { pt in
+                            "\(formatTime(pt.time)) on \(pt.date.formatted(.dateTime.month(.abbreviated).day().year()))"
+                        } ?? "",
+                        isPresented: Binding(get: { tappedPoint != nil }, set: { if !$0 { tappedPoint = nil } }),
+                        titleVisibility: .visible
+                    ) {
+                        if let pt = tappedPoint {
+                            Button("Exclude this workout", role: .destructive) {
+                                vm.toggleExcluded(pt.id)
+                                tappedPoint = nil
+                            }
+                        }
+                        Button("Cancel", role: .cancel) { tappedPoint = nil }
+                    }
                 }
             } else if !vm.bestEffortsLoading {
                 Text("No workouts long enough for \(DashboardViewModel.bestEffortDistances.first { $0.id == selectedDistanceID }?.label ?? selectedDistanceID)")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    @ChartContentBuilder
+    private func prLineContent(_ pt: DashboardViewModel.BestEffortPoint) -> some ChartContent {
+        let isTapped = tappedPoint?.id == pt.id
+        LineMark(x: .value("Date", pt.date), y: .value("Time", pt.time))
+            .foregroundStyle(Color.yellow)
+            .lineStyle(StrokeStyle(lineWidth: 2))
+            .interpolationMethod(.stepStart)
+        PointMark(x: .value("Date", pt.date), y: .value("Time", pt.time))
+            .foregroundStyle(isTapped ? Color.red : Color.yellow)
+            .symbolSize(isTapped ? 80 : 50)
+    }
+
+    private func handleChartTap(location: CGPoint, proxy: ChartProxy, geo: GeometryProxy) {
+        guard let date: Date = proxy.value(atX: location.x - geo.frame(in: .local).minX),
+              let time: Double = proxy.value(atY: location.y - geo.frame(in: .local).minY)
+        else { return }
+        let nearest = prs.min {
+            distanceToPoint($0, date: date, time: time, proxy: proxy, geo: geo) <
+            distanceToPoint($1, date: date, time: time, proxy: proxy, geo: geo)
+        }
+        if let nearest, distanceToPoint(nearest, date: date, time: time, proxy: proxy, geo: geo) < 30 {
+            tappedPoint = nearest
+        }
+    }
+
+    private func distanceToPoint(
+        _ pt: DashboardViewModel.BestEffortPoint,
+        date: Date, time: Double,
+        proxy: ChartProxy, geo: GeometryProxy
+    ) -> CGFloat {
+        let frame = geo.frame(in: .local)
+        guard let px = proxy.position(forX: pt.date),
+              let py = proxy.position(forY: pt.time) else { return .infinity }
+        let tx = proxy.position(forX: date) ?? 0
+        let ty = proxy.position(forY: time) ?? 0
+        let dx = (px + frame.minX) - (tx + frame.minX)
+        let dy = (py + frame.minY) - (ty + frame.minY)
+        return sqrt(dx * dx + dy * dy)
     }
 
     private func progressionDomain(_ pts: [DashboardViewModel.BestEffortPoint]) -> ClosedRange<Double> {

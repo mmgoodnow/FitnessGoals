@@ -162,10 +162,11 @@ struct RouteMapView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
-        map.isUserInteractionEnabled = false
-        map.isScrollEnabled = false
-        map.isZoomEnabled = false
-        map.showsCompass = false
+        map.isScrollEnabled = true
+        map.isZoomEnabled = true
+        map.isRotateEnabled = true
+        map.isPitchEnabled = false
+        map.showsCompass = true
         map.pointOfInterestFilter = .excludingAll
         map.delegate = context.coordinator
         return map
@@ -199,48 +200,76 @@ struct RouteMapView: UIViewRepresentable {
             map.addAnnotation(splitEnd)
         }
 
-        // Fit to split if available, otherwise full route
-        let fitRect: MKMapRect
-        if splitCoordinates.count > 1 {
-            let splitLine = MKPolyline(coordinates: splitCoordinates, count: splitCoordinates.count)
-            fitRect = splitLine.boundingMapRect
-        } else {
-            fitRect = fullLine.boundingMapRect
+        // Re-fit only when the highlighted split changes, so manual pan/zoom is preserved.
+        let key = splitCoordinates.first.map { "\($0.latitude),\($0.longitude)" } ?? "full"
+        if context.coordinator.lastFitKey != key {
+            context.coordinator.lastFitKey = key
+            let fitRect: MKMapRect
+            if splitCoordinates.count > 1 {
+                let splitLine = MKPolyline(coordinates: splitCoordinates, count: splitCoordinates.count)
+                fitRect = splitLine.boundingMapRect
+            } else {
+                fitRect = fullLine.boundingMapRect
+            }
+            map.setVisibleMapRect(fitRect, edgePadding: UIEdgeInsets(top: 48, left: 48, bottom: 48, right: 48), animated: true)
         }
-        map.setVisibleMapRect(fitRect, edgePadding: UIEdgeInsets(top: 48, left: 48, bottom: 48, right: 48), animated: false)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     class Coordinator: NSObject, MKMapViewDelegate {
+        var lastFitKey: String?
+
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             guard let polyline = overlay as? TaggedPolyline else { return MKOverlayRenderer(overlay: overlay) }
             let r = MKPolylineRenderer(polyline: polyline)
             switch polyline.kind {
             case .full:
-                r.strokeColor = UIColor.systemGray.withAlphaComponent(0.5)
-                r.lineWidth = 2
+                r.strokeColor = UIColor.systemBlue.withAlphaComponent(0.8)
+                r.lineWidth = 3
             case .split:
                 r.strokeColor = UIColor.systemYellow
-                r.lineWidth = 4
+                r.lineWidth = 5
             }
             return r
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            let view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: annotation.title!!)
+            let view = MKAnnotationView(annotation: annotation, reuseIdentifier: annotation.title!!)
             view.canShowCallout = false
             switch annotation.title!! {
             case "Split Start":
-                view.markerTintColor = .systemGreen
-                view.glyphImage = UIImage(systemName: "flag.fill")
+                view.image = Self.dotImage(color: .systemGreen)
             case "Split End":
-                view.markerTintColor = .systemRed
-                view.glyphImage = UIImage(systemName: "flag.checkered")
+                view.image = Self.dotImage(color: .systemRed, checkered: true)
             default:
-                view.markerTintColor = .systemBlue
+                view.image = Self.dotImage(color: .systemBlue)
             }
+            view.centerOffset = .zero
             return view
+        }
+
+        private static func dotImage(color: UIColor, checkered: Bool = false) -> UIImage {
+            let size: CGFloat = 14
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+            return renderer.image { ctx in
+                let rect = CGRect(x: 0, y: 0, width: size, height: size)
+                UIColor.white.setFill()
+                ctx.cgContext.fillEllipse(in: rect)
+                let inner = rect.insetBy(dx: 2, dy: 2)
+                color.setFill()
+                ctx.cgContext.fillEllipse(in: inner)
+                if checkered {
+                    ctx.cgContext.saveGState()
+                    ctx.cgContext.addEllipse(in: inner)
+                    ctx.cgContext.clip()
+                    UIColor.white.setFill()
+                    let half = inner.width / 2
+                    ctx.cgContext.fill(CGRect(x: inner.minX, y: inner.minY, width: half, height: half))
+                    ctx.cgContext.fill(CGRect(x: inner.midX, y: inner.midY, width: half, height: half))
+                    ctx.cgContext.restoreGState()
+                }
+            }
         }
     }
 }

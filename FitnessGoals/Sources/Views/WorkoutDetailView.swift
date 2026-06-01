@@ -34,7 +34,7 @@ struct WorkoutDetailView: View {
         VStack(spacing: 0) {
             // Pinned map header — stays visible while the list scrolls.
             mapHeader
-                .frame(height: 240)
+                .frame(height: 340)
                 .ignoresSafeArea(edges: .top)
 
             List {

@@ -434,6 +434,11 @@ class DashboardViewModel: ObservableObject {
         workouts.max(by: { $0.startDate < $1.startDate })
     }
 
+    func workout(for id: UUID) -> Workout? {
+        let all = historicalWorkouts.values.flatMap { $0 } + workouts
+        return all.first { $0.id == id }
+    }
+
     // MARK: - Max HR estimation
 
     var estimatedMaxHR: Double {

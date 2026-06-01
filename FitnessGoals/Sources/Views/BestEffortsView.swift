@@ -127,20 +127,14 @@ struct BestEffortsView: View {
                         }
                     }
                     .frame(height: 140).clipped()
-                    .confirmationDialog(
-                        tappedPoint.map { pt in
-                            "\(formatTime(pt.time)) on \(pt.date.formatted(.dateTime.month(.abbreviated).day().year()))"
-                        } ?? "",
-                        isPresented: Binding(get: { tappedPoint != nil }, set: { if !$0 { tappedPoint = nil } }),
-                        titleVisibility: .visible
-                    ) {
-                        if let pt = tappedPoint {
-                            Button("Exclude this workout", role: .destructive) {
-                                vm.toggleExcluded(pt.id)
-                                tappedPoint = nil
-                            }
-                        }
-                        Button("Cancel", role: .cancel) { tappedPoint = nil }
+                    .sheet(item: $tappedPoint) { pt in
+                        let dist = DashboardViewModel.bestEffortDistances.first { $0.id == selectedDistanceID }
+                        WorkoutDetailView(
+                            point: pt,
+                            distanceLabel: dist?.label ?? selectedDistanceID,
+                            distanceMeters: dist?.meters ?? 0
+                        )
+                        .environmentObject(vm)
                     }
                 }
             } else if !vm.bestEffortsLoading {

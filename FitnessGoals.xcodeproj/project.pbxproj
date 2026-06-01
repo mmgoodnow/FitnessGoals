@@ -10,8 +10,6 @@
 		A001 /* FitnessGoalsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* FitnessGoalsApp.swift */; };
 		A002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* ContentView.swift */; };
 		A003 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* DashboardView.swift */; };
-		A004 /* SportPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F004 /* SportPickerView.swift */; };
-		A005 /* GoalSetterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* GoalSetterView.swift */; };
 		A006 /* ProgressCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* ProgressCardView.swift */; };
 		A007 /* ProgressChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* ProgressChartView.swift */; };
 		A008 /* WeeklyChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F008 /* WeeklyChartView.swift */; };
@@ -40,8 +38,6 @@
 		F001 /* FitnessGoalsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessGoalsApp.swift; sourceTree = "<group>"; };
 		F002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F003 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		F004 /* SportPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportPickerView.swift; sourceTree = "<group>"; };
-		F005 /* GoalSetterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSetterView.swift; sourceTree = "<group>"; };
 		F006 /* ProgressCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressCardView.swift; sourceTree = "<group>"; };
 		F007 /* ProgressChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressChartView.swift; sourceTree = "<group>"; };
 		F008 /* WeeklyChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyChartView.swift; sourceTree = "<group>"; };
@@ -162,9 +158,7 @@
 			children = (
 				F002 /* ContentView.swift */,
 				F003 /* DashboardView.swift */,
-				F004 /* SportPickerView.swift */,
-				F005 /* GoalSetterView.swift */,
-				F006 /* ProgressCardView.swift */,
+					F006 /* ProgressCardView.swift */,
 				F007 /* ProgressChartView.swift */,
 				F008 /* WeeklyChartView.swift */,
 				F009 /* WeekdayAverageChartView.swift */,
@@ -260,8 +254,6 @@
 				A001 /* FitnessGoalsApp.swift in Sources */,
 				A002 /* ContentView.swift in Sources */,
 				A003 /* DashboardView.swift in Sources */,
-				A004 /* SportPickerView.swift in Sources */,
-				A005 /* GoalSetterView.swift in Sources */,
 				A006 /* ProgressCardView.swift in Sources */,
 				A007 /* ProgressChartView.swift in Sources */,
 				A008 /* WeeklyChartView.swift in Sources */,

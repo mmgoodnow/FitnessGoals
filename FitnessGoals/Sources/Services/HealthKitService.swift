@@ -242,24 +242,6 @@ class HealthKitService: ObservableObject {
         return locations
     }
 
-    /// Removes points where the speed from the previous retained point exceeds maxSpeedMS.
-    /// Uses a greedy forward pass — if a point is too fast, drop it and check the next.
-    private func filterSuperspeedPoints(_ locations: [CLLocation], maxSpeedMS: Double) -> [CLLocation] {
-        guard !locations.isEmpty else { return [] }
-        var result: [CLLocation] = [locations[0]]
-        for loc in locations.dropFirst() {
-            let prev = result.last!
-            let dt = loc.timestamp.timeIntervalSince(prev.timestamp)
-            let dist = loc.distance(from: prev)
-            guard dt > 0 else { continue }
-            let speed = dist / dt
-            if speed <= maxSpeedMS {
-                result.append(loc)
-            }
-            // else: drop this point — it implies car/teleport speed
-        }
-        return result
-    }
 
     /// Pure computation — walks locations with a two-pointer sliding window.
     private func bestSplits(locations: [CLLocation], distances: [Double]) -> [Double: TimeInterval] {

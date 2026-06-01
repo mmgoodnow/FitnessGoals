@@ -39,12 +39,6 @@ final class BestEffortCache {
         save()
     }
 
-    /// Remove cache entries that contain any zero times (from a previous buggy fetch).
-    func purgeZeroEntries() {
-        let before = store.count
-        store = store.filter { _, splits in splits.values.allSatisfy { $0 > 1 } }
-        if store.count != before { save() }
-    }
 
     // MARK: - Persistence
 

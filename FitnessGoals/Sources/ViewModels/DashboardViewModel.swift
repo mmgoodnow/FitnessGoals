@@ -142,12 +142,7 @@ class DashboardViewModel: ObservableObject {
         totalMiles - targetMilesToDate
     }
 
-    var requiredDailyMiles: Double {
-        guard daysRemaining > 0 else { return 0 }
-        return max(yearlyGoalMiles - totalMiles, 0) / Double(daysRemaining)
-    }
-
-    var weeklyAverageMiles: Double {
+var weeklyAverageMiles: Double {
         guard dayOfYear > 0 else { return 0 }
         return totalMiles / (Double(dayOfYear) / 7.0)
     }
@@ -327,7 +322,6 @@ static let bestEffortDistances: [BestEffortDistance] = [
 
         bestEffortsLoading = true
         bestEffortsProgress = 0
-        cache.purgeZeroEntries()
 
         // We need the original HKWorkout objects for route queries — fetch them all at once
         let hkWorkouts = await fetchAllRunningHKWorkouts()

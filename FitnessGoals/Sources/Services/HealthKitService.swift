@@ -183,6 +183,35 @@ class HealthKitService: ObservableObject {
 
     // MARK: - Route-based best effort splits
 
+    /// Fetches the GPS coordinates for a workout route (for map display).
+    func fetchRouteCoordinates(for hkWorkout: HKWorkout) async -> [CLLocationCoordinate2D] {
+        let routeType = HKSeriesType.workoutRoute()
+        let routeSamples: [HKWorkoutRoute] = (try? await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: routeType,
+                predicate: HKQuery.predicateForObjects(from: hkWorkout),
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if let error { continuation.resume(throwing: error); return }
+                continuation.resume(returning: samples as? [HKWorkoutRoute] ?? [])
+            }
+            store.execute(query)
+        }) ?? []
+        guard let route = routeSamples.first else { return [] }
+
+        var locations: [CLLocation] = []
+        try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let query = HKWorkoutRouteQuery(route: route) { _, newLocations, done, error in
+                if let error { continuation.resume(throwing: error); return }
+                if let newLocations { locations.append(contentsOf: newLocations) }
+                if done { continuation.resume() }
+            }
+            store.execute(query)
+        }
+        return locations.sorted { $0.timestamp < $1.timestamp }.map { $0.coordinate }
+    }
+
     /// Returns best split time (seconds) for each requested distance (meters),
     /// computed by sliding a window along the GPS route.
     /// Returns nil for distances the workout doesn't cover.

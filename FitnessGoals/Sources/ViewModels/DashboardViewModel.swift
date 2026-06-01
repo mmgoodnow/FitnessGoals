@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import HealthKit
+import CoreLocation
 
 @MainActor
 class DashboardViewModel: ObservableObject {
@@ -432,6 +433,12 @@ class DashboardViewModel: ObservableObject {
 
     var mostRecentWorkout: Workout? {
         workouts.max(by: { $0.startDate < $1.startDate })
+    }
+
+    func fetchRouteCoordinates(for workoutID: UUID) async -> [CLLocationCoordinate2D] {
+        let hkWorkouts = await fetchAllRunningHKWorkouts()
+        guard let hk = hkWorkouts.first(where: { $0.uuid == workoutID }) else { return [] }
+        return await healthKit.fetchRouteCoordinates(for: hk)
     }
 
     func workout(for id: UUID) -> Workout? {

@@ -10,7 +10,7 @@ struct WorkoutDetailView: View {
     let distanceLabel: String
     let distanceMeters: Double
 
-    @State private var coordinates: [CLLocationCoordinate2D] = []
+    @State private var routeData: HealthKitService.RouteData = .init(coordinates: [], bestSplitCoordinates: [])
     @State private var loadingRoute = true
 
     private var workout: Workout? { vm.workout(for: point.id) }
@@ -22,8 +22,8 @@ struct WorkoutDetailView: View {
                 // Map section
                 Section {
                     ZStack {
-                        if coordinates.count > 1 {
-                            RouteMapView(coordinates: coordinates)
+                        if routeData.coordinates.count > 1 {
+                            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: routeData.bestSplitCoordinates)
                                 .frame(height: 220)
                                 .listRowInsets(EdgeInsets())
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -101,7 +101,7 @@ struct WorkoutDetailView: View {
                 }
             }
             .task {
-                coordinates = await vm.fetchRouteCoordinates(for: point.id)
+                routeData = await vm.fetchRouteData(for: point.id, highlightDistance: distanceMeters)
                 loadingRoute = false
             }
         }
@@ -110,8 +110,15 @@ struct WorkoutDetailView: View {
 
 // MARK: - Route map
 
+// Tag polylines so the renderer knows which color to use
+private class TaggedPolyline: MKPolyline {
+    enum Kind { case full, split }
+    var kind: Kind = .full
+}
+
 struct RouteMapView: UIViewRepresentable {
     let coordinates: [CLLocationCoordinate2D]
+    let splitCoordinates: [CLLocationCoordinate2D]
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
@@ -120,6 +127,7 @@ struct RouteMapView: UIViewRepresentable {
         map.isZoomEnabled = false
         map.showsCompass = false
         map.pointOfInterestFilter = .excludingAll
+        map.delegate = context.coordinator
         return map
     }
 
@@ -128,39 +136,64 @@ struct RouteMapView: UIViewRepresentable {
         map.removeAnnotations(map.annotations)
         guard coordinates.count > 1 else { return }
 
-        let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
-        map.addOverlay(polyline)
-        map.delegate = context.coordinator
+        // Full route — faded
+        let fullLine = TaggedPolyline(coordinates: coordinates, count: coordinates.count)
+        fullLine.kind = .full
+        map.addOverlay(fullLine, level: .aboveRoads)
 
-        // Fit map to route with padding
-        let rect = polyline.boundingMapRect
-        map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 24, left: 24, bottom: 24, right: 24), animated: false)
+        // Best-split segment — highlighted on top
+        if splitCoordinates.count > 1 {
+            let splitLine = TaggedPolyline(coordinates: splitCoordinates, count: splitCoordinates.count)
+            splitLine.kind = .split
+            map.addOverlay(splitLine, level: .aboveRoads)
 
-        // Start dot
-        let start = MKPointAnnotation()
-        start.coordinate = coordinates.first!
-        start.title = "Start"
-        map.addAnnotation(start)
+            // Start/end pins for the split
+            let splitStart = MKPointAnnotation()
+            splitStart.coordinate = splitCoordinates.first!
+            splitStart.title = "Split Start"
+            map.addAnnotation(splitStart)
+
+            let splitEnd = MKPointAnnotation()
+            splitEnd.coordinate = splitCoordinates.last!
+            splitEnd.title = "Split End"
+            map.addAnnotation(splitEnd)
+        }
+
+        // Fit to full route
+        let rect = fullLine.boundingMapRect
+        map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 32, left: 32, bottom: 32, right: 32), animated: false)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     class Coordinator: NSObject, MKMapViewDelegate {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let polyline = overlay as? MKPolyline {
-                let r = MKPolylineRenderer(polyline: polyline)
-                r.strokeColor = UIColor.systemOrange
-                r.lineWidth = 3
-                return r
+            guard let polyline = overlay as? TaggedPolyline else { return MKOverlayRenderer(overlay: overlay) }
+            let r = MKPolylineRenderer(polyline: polyline)
+            switch polyline.kind {
+            case .full:
+                r.strokeColor = UIColor.systemGray.withAlphaComponent(0.5)
+                r.lineWidth = 2
+            case .split:
+                r.strokeColor = UIColor.systemYellow
+                r.lineWidth = 4
             }
-            return MKOverlayRenderer(overlay: overlay)
+            return r
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            let view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "start")
-            view.markerTintColor = .systemGreen
-            view.glyphImage = UIImage(systemName: "figure.run")
+            let view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: annotation.title!!)
             view.canShowCallout = false
+            switch annotation.title!! {
+            case "Split Start":
+                view.markerTintColor = .systemGreen
+                view.glyphImage = UIImage(systemName: "flag.fill")
+            case "Split End":
+                view.markerTintColor = .systemRed
+                view.glyphImage = UIImage(systemName: "flag.checkered")
+            default:
+                view.markerTintColor = .systemBlue
+            }
             return view
         }
     }

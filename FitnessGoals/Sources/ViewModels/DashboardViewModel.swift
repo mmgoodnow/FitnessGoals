@@ -435,10 +435,12 @@ class DashboardViewModel: ObservableObject {
         workouts.max(by: { $0.startDate < $1.startDate })
     }
 
-    func fetchRouteCoordinates(for workoutID: UUID) async -> [CLLocationCoordinate2D] {
+    func fetchRouteData(for workoutID: UUID, highlightDistance: Double? = nil) async -> HealthKitService.RouteData {
         let hkWorkouts = await fetchAllRunningHKWorkouts()
-        guard let hk = hkWorkouts.first(where: { $0.uuid == workoutID }) else { return [] }
-        return await healthKit.fetchRouteCoordinates(for: hk)
+        guard let hk = hkWorkouts.first(where: { $0.uuid == workoutID }) else {
+            return HealthKitService.RouteData(coordinates: [], bestSplitCoordinates: [])
+        }
+        return await healthKit.fetchRouteData(for: hk, highlightDistance: highlightDistance)
     }
 
     func workout(for id: UUID) -> Workout? {

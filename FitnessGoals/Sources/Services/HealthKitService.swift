@@ -183,10 +183,39 @@ class HealthKitService: ObservableObject {
 
     // MARK: - Route-based best effort splits
 
-    /// Fetches the GPS coordinates for a workout route (for map display).
-    func fetchRouteCoordinates(for hkWorkout: HKWorkout) async -> [CLLocationCoordinate2D] {
+    struct RouteData {
+        let coordinates: [CLLocationCoordinate2D]
+        let bestSplitCoordinates: [CLLocationCoordinate2D]  // empty if no target distance
+    }
+
+    /// Fetches route coordinates and optionally the best-split segment for a given distance.
+    func fetchRouteData(for hkWorkout: HKWorkout, highlightDistance: Double? = nil) async -> RouteData {
+        let locations = (try? await fetchFilteredLocations(for: hkWorkout)) ?? []
+        let coords = locations.map { $0.coordinate }
+        guard let targetDist = highlightDistance, locations.count >= 2 else {
+            return RouteData(coordinates: coords, bestSplitCoordinates: [])
+        }
+        let segment = bestSplitSegment(locations: locations, distance: targetDist)
+        return RouteData(coordinates: coords, bestSplitCoordinates: segment.map { $0.coordinate })
+    }
+
+    /// Returns best split time (seconds) for each requested distance (meters),
+    /// computed by sliding a window along the GPS route.
+    /// Returns nil for distances the workout doesn't cover.
+    func fetchRouteSplits(
+        for hkWorkout: HKWorkout,
+        distances: [Double]
+    ) async throws -> [Double: TimeInterval] {
+        let locations = try await fetchFilteredLocations(for: hkWorkout)
+        guard locations.count >= 2 else { return [:] }
+        return bestSplits(locations: locations, distances: distances)
+    }
+
+    // MARK: - Shared route helpers
+
+    private func fetchFilteredLocations(for hkWorkout: HKWorkout) async throws -> [CLLocation] {
         let routeType = HKSeriesType.workoutRoute()
-        let routeSamples: [HKWorkoutRoute] = (try? await withCheckedThrowingContinuation { continuation in
+        let routeSamples: [HKWorkoutRoute] = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: routeType,
                 predicate: HKQuery.predicateForObjects(from: hkWorkout),
@@ -197,46 +226,9 @@ class HealthKitService: ObservableObject {
                 continuation.resume(returning: samples as? [HKWorkoutRoute] ?? [])
             }
             store.execute(query)
-        }) ?? []
+        }
         guard let route = routeSamples.first else { return [] }
 
-        var locations: [CLLocation] = []
-        try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let query = HKWorkoutRouteQuery(route: route) { _, newLocations, done, error in
-                if let error { continuation.resume(throwing: error); return }
-                if let newLocations { locations.append(contentsOf: newLocations) }
-                if done { continuation.resume() }
-            }
-            store.execute(query)
-        }
-        return locations.sorted { $0.timestamp < $1.timestamp }.map { $0.coordinate }
-    }
-
-    /// Returns best split time (seconds) for each requested distance (meters),
-    /// computed by sliding a window along the GPS route.
-    /// Returns nil for distances the workout doesn't cover.
-    func fetchRouteSplits(
-        for hkWorkout: HKWorkout,
-        distances: [Double]
-    ) async throws -> [Double: TimeInterval] {
-        // 1. Find the workout route
-        let routeType = HKSeriesType.workoutRoute()
-        let routeSamples: [HKWorkoutRoute] = try await withCheckedThrowingContinuation { continuation in
-            let pred = HKQuery.predicateForObjects(from: hkWorkout)
-            let query = HKSampleQuery(
-                sampleType: routeType,
-                predicate: pred,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: nil
-            ) { _, samples, error in
-                if let error { continuation.resume(throwing: error); return }
-                continuation.resume(returning: samples as? [HKWorkoutRoute] ?? [])
-            }
-            store.execute(query)
-        }
-        guard let route = routeSamples.first else { return [:] }
-
-        // 2. Stream all CLLocation points from the route
         var locations: [CLLocation] = []
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let query = HKWorkoutRouteQuery(route: route) { _, newLocations, done, error in
@@ -246,17 +238,8 @@ class HealthKitService: ObservableObject {
             }
             store.execute(query)
         }
-        guard locations.count >= 2 else { return [:] }
-
-        // Sort by timestamp (should already be sorted, but be safe)
         locations.sort { $0.timestamp < $1.timestamp }
-
-        // Filter out GPS points that imply superhuman speed between consecutive samples.
-        // 10 m/s ≈ 6:26/mi — faster than any human road race record.
-        let filtered = filterSuperspeedPoints(locations, maxSpeedMS: 10.0)
-
-        // 3. Sliding window: for each target distance find the fastest window
-        return bestSplits(locations: filtered, distances: distances)
+        return filterSuperspeedPoints(locations, maxSpeedMS: 10.0)
     }
 
     /// Removes points where the speed from the previous retained point exceeds maxSpeedMS.
@@ -309,5 +292,34 @@ class HealthKitService: ObservableObject {
             if best < .infinity { results[targetDist] = best }
         }
         return results
+    }
+
+    /// Returns the subset of locations corresponding to the fastest window for a single distance.
+    private func bestSplitSegment(locations: [CLLocation], distance targetDist: Double) -> [CLLocation] {
+        var cumDist = [Double](repeating: 0, count: locations.count)
+        for i in 1 ..< locations.count {
+            cumDist[i] = cumDist[i - 1] + locations[i].distance(from: locations[i - 1])
+        }
+        guard (cumDist.last ?? 0) >= targetDist else { return [] }
+
+        var bestTime: TimeInterval = .infinity
+        var bestLeft = 0, bestRight = 0
+        var left = 0
+
+        for right in 1 ..< locations.count {
+            while cumDist[right] - cumDist[left] > targetDist { left += 1 }
+            let windowDist = cumDist[right] - cumDist[left]
+            guard windowDist > 0 else { continue }
+            let windowTime = locations[right].timestamp.timeIntervalSince(locations[left].timestamp)
+            guard windowTime > 1 else { continue }
+            let scaledTime = windowTime * (targetDist / windowDist)
+            if scaledTime > 1 && scaledTime < bestTime {
+                bestTime = scaledTime
+                bestLeft = left
+                bestRight = right
+            }
+        }
+        guard bestTime < .infinity else { return [] }
+        return Array(locations[bestLeft ... bestRight])
     }
 }

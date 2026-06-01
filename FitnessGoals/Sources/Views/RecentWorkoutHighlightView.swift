@@ -67,6 +67,7 @@ struct RecentWorkoutHighlightView: View {
             .sheet(item: $selectedWorkout) { target in
                 WorkoutDetailView(workoutID: target.id)
                     .environmentObject(vm)
+                    .presentationDragIndicator(.visible)
             }
         }
     }

@@ -31,13 +31,13 @@ struct WorkoutDetailView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Pinned map header — stays visible while the list scrolls.
-                mapHeader
-                    .frame(height: 240)
+        VStack(spacing: 0) {
+            // Pinned map header — stays visible while the list scrolls.
+            mapHeader
+                .frame(height: 240)
+                .ignoresSafeArea(edges: .top)
 
-                List {
+            List {
                     if !splitRows.isEmpty {
                         Section {
                             ForEach(splitRows) { dist in
@@ -84,22 +84,15 @@ struct WorkoutDetailView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle("Workout Detail")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .task {
-                routeData = await vm.fetchFullRouteData(for: workoutID)
-                // Default-select the longest qualifying distance (most meaningful effort).
-                selectedDistance = splitRows.last?.meters
-                loadingRoute = false
-            }
+        }
+        .task {
+            routeData = await vm.fetchFullRouteData(for: workoutID)
+            // Default-select the longest qualifying distance (most meaningful effort).
+            selectedDistance = splitRows.last?.meters
+            loadingRoute = false
         }
     }
+
 
     @ViewBuilder
     private var mapHeader: some View {

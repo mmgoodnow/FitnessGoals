@@ -130,6 +130,7 @@ struct BestEffortsView: View {
                     .sheet(item: $tappedPoint) { pt in
                         WorkoutDetailView(workoutID: pt.id)
                             .environmentObject(vm)
+                            .presentationDragIndicator(.visible)
                     }
                 }
             } else if !vm.bestEffortsLoading {

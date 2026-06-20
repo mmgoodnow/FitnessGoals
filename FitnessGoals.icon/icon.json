@@ -5,31 +5,31 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "srgb:0.08627,0.62745,0.52157,1.00000"
+            "solid" : "srgb:0.09020,0.56078,0.48627,1.00000"
           },
-          "image-name" : "track-ring.svg",
-          "name" : "Track Ring"
+          "image-name" : "signal-bars.svg",
+          "name" : "Ascending Bars"
         },
         {
           "fill" : {
-            "solid" : "srgb:0.18039,0.40784,0.82745,1.00000"
+            "solid" : "srgb:0.18431,0.43529,0.83922,1.00000"
           },
-          "image-name" : "progress-arc.svg",
-          "name" : "Progress Arc"
+          "image-name" : "trend-line.svg",
+          "name" : "Trend Line"
         },
         {
           "fill" : {
-            "solid" : "srgb:0.94118,0.32157,0.24706,1.00000"
+            "solid" : "srgb:0.12157,0.16471,0.26667,1.00000"
           },
-          "image-name" : "route-line.svg",
-          "name" : "Route Line"
+          "image-name" : "runner-body.svg",
+          "name" : "Runner Body"
         },
         {
           "fill" : {
-            "solid" : "srgb:0.72941,0.85882,0.33333,1.00000"
+            "solid" : "srgb:0.94510,0.35294,0.25882,1.00000"
           },
-          "image-name" : "finish-marker.svg",
-          "name" : "Finish Marker"
+          "image-name" : "runner-stride.svg",
+          "name" : "Runner Stride"
         }
       ],
       "shadow" : {

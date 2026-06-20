@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" version="1.1">
   <title>FitnessGoals runner</title>
-  <g fill="#1f2a44">
-    <circle cx="324" cy="260" r="76"/>
-    <path d="M 336 360 C 388 342 440 362 468 410 L 526 510 C 538 530 531 556 511 568 C 491 580 466 574 454 553 L 405 470 L 354 506 L 450 594 C 466 609 471 633 461 653 L 392 792 C 381 814 355 823 333 812 C 311 801 302 775 313 753 L 365 649 L 286 578 L 244 690 C 237 711 216 724 194 719 C 172 714 159 691 166 669 L 236 489 C 250 446 281 379 336 360 Z"/>
-    <path d="M 427 411 L 548 376 C 573 369 599 383 606 408 C 613 433 599 459 574 466 L 456 500 Z"/>
+  <g fill="none" stroke="#1f2a44" stroke-width="78" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 378 382 L 486 506"/>
+    <path d="M 424 424 L 570 374"/>
+    <path d="M 486 506 L 610 632 L 736 676"/>
+    <path d="M 486 506 L 374 650 L 254 782"/>
   </g>
+  <circle cx="338" cy="260" r="72" fill="#1f2a44"/>
 </svg>

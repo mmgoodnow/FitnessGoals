@@ -16,6 +16,16 @@ struct PaceAnalysisView: View {
         data.contains { $0.avgPaceSecondsPerMeter != nil }
     }
 
+    private var availableZones: [HRZone] {
+        HRZone.allCases.filter { zone in
+            vm.paceAnalysisData(for: zone).contains { $0.avgPaceSecondsPerMeter != nil }
+        }
+    }
+
+    private var availableZoneIDs: [Int] {
+        availableZones.map(\.id)
+    }
+
     // Negate pace values so faster = higher bar (reversed y axis without crashing)
     private var chartData: [(point: DashboardViewModel.YearPacePoint, yVal: Double)] {
         data.compactMap { p in
@@ -45,7 +55,7 @@ struct PaceAnalysisView: View {
                         ZonePill(label: "All", color: .blue, selected: selectedZone == nil) {
                             selectedZone = nil
                         }
-                        ForEach(HRZone.allCases) { zone in
+                        ForEach(availableZones) { zone in
                             ZonePill(
                                 label: zone.name,
                                 color: zone.color,
@@ -113,6 +123,18 @@ struct PaceAnalysisView: View {
                     .frame(height: 180).clipped()
                 }
             }
+        }
+        .onAppear {
+            resetUnavailableSelectedZone()
+        }
+        .onChange(of: availableZoneIDs) { _, _ in
+            resetUnavailableSelectedZone()
+        }
+    }
+
+    private func resetUnavailableSelectedZone() {
+        if let selectedZone, !availableZones.contains(selectedZone) {
+            self.selectedZone = nil
         }
     }
 }

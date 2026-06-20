@@ -103,7 +103,7 @@ struct WorkoutDetailView: View {
     @ViewBuilder
     private var mapHeader: some View {
         if routeData.coordinates.count > 1 {
-            ZStack(alignment: .bottom) {
+            ZStack(alignment: .bottomTrailing) {
                 RouteMapView(
                     coordinates: routeData.coordinates,
                     splitCoordinates: highlightCoords,
@@ -111,17 +111,19 @@ struct WorkoutDetailView: View {
                     animationDuration: animationDuration
                 )
 
-                HStack(spacing: 10) {
-                    Picker("Route speed", selection: $routeAnimationSpeed) {
-                        ForEach(RouteAnimationSpeed.allCases) { speed in
-                            Text(speed.label).tag(speed)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 176)
-                    .onChange(of: routeAnimationSpeed) { _, _ in
+                HStack(spacing: 8) {
+                    Button {
+                        routeAnimationSpeed = routeAnimationSpeed.next
                         routeAnimationID += 1
+                    } label: {
+                        Text(routeAnimationSpeed.label)
+                            .font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 42, height: 42)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
+                    .accessibilityLabel("Route animation speed")
+                    .accessibilityValue(routeAnimationSpeed.label)
 
                     Button {
                         routeAnimationID += 1
@@ -130,11 +132,10 @@ struct WorkoutDetailView: View {
                             .font(.headline)
                             .foregroundStyle(.primary)
                             .frame(width: 42, height: 42)
+                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .accessibilityLabel("Replay route animation")
                 }
-                .padding(8)
-                .background(.ultraThinMaterial, in: Capsule())
                 .padding(16)
             }
         } else if loadingRoute {
@@ -207,6 +208,14 @@ private enum RouteAnimationSpeed: String, CaseIterable, Identifiable {
         case .normal: 1
         case .fast: 2
         case .fastest: 4
+        }
+    }
+
+    var next: Self {
+        switch self {
+        case .normal: .fast
+        case .fast: .fastest
+        case .fastest: .normal
         }
     }
 }

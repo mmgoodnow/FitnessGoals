@@ -102,8 +102,14 @@ struct PaceAnalysisView: View {
                         .annotation(position: .top) {
                             let pos = -item.yVal
                             let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                            Text(String(format: "%d:%02d", m, s))
-                                .font(.caption2).foregroundStyle(.secondary)
+                            VStack(spacing: 1) {
+                                Text(String(format: "%d:%02d", m, s))
+                                    .font(.caption2.weight(.semibold))
+                                Text(formatMiles(item.point.totalMiles))
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .foregroundStyle(.secondary)
                         }
                     }
                     .chartYScale(domain: domain)
@@ -120,7 +126,7 @@ struct PaceAnalysisView: View {
                         }
                     }
                     
-                    .frame(height: 180).clipped()
+                    .frame(height: 200).clipped()
                 }
             }
         }
@@ -136,6 +142,13 @@ struct PaceAnalysisView: View {
         if let selectedZone, !availableZones.contains(selectedZone) {
             self.selectedZone = nil
         }
+    }
+
+    private func formatMiles(_ miles: Double) -> String {
+        if miles >= 10 {
+            return "\(Int(miles.rounded())) mi"
+        }
+        return String(format: "%.1f mi", miles)
     }
 }
 

@@ -31,6 +31,7 @@
 		A025 /* RecordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F025 /* RecordsView.swift */; };
 		A026 /* BestEffortCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F026 /* BestEffortCache.swift */; };
 		A027 /* WorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F027 /* WorkoutDetailView.swift */; };
+		AICON /* FitnessGoals.icon in Resources */ = {isa = PBXBuildFile; fileRef = FICON /* FitnessGoals.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +61,7 @@
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
+		FICON /* FitnessGoals.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = FitnessGoals.icon; sourceTree = "<group>"; };
 		FPLIST /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -99,6 +101,7 @@
 				GAPP /* FitnessGoals */,
 				GFWK /* Frameworks */,
 				GPROD /* Products */,
+				FICON /* FitnessGoals.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -238,6 +241,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AICON /* FitnessGoals.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,7 +346,7 @@
 		BCDEBUG_TARGET /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = FitnessGoals;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FitnessGoals/FitnessGoals.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -425,7 +429,7 @@
 		BCRELEASE_TARGET /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = FitnessGoals;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FitnessGoals/FitnessGoals.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";

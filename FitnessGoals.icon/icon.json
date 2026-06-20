@@ -1,0 +1,51 @@
+{
+  "fill" : "system-light",
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:0.08627,0.62745,0.52157,1.00000"
+          },
+          "image-name" : "track-ring.svg",
+          "name" : "Track Ring"
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:0.18039,0.40784,0.82745,1.00000"
+          },
+          "image-name" : "progress-arc.svg",
+          "name" : "Progress Arc"
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:0.94118,0.32157,0.24706,1.00000"
+          },
+          "image-name" : "route-line.svg",
+          "name" : "Route Line"
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:0.72941,0.85882,0.33333,1.00000"
+          },
+          "image-name" : "finish-marker.svg",
+          "name" : "Finish Marker"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.45
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.45
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

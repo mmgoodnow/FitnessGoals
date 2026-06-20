@@ -102,14 +102,18 @@ struct PaceAnalysisView: View {
                         .annotation(position: .top) {
                             let pos = -item.yVal
                             let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                            VStack(spacing: 1) {
-                                Text(String(format: "%d:%02d", m, s))
-                                    .font(.caption2.weight(.semibold))
-                                Text(formatMiles(item.point.totalMiles))
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
+                            Text(String(format: "%d:%02d", m, s))
+                                .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
+                        }
+                        .annotation(position: .overlay, alignment: .center) {
+                            Text(formatMiles(item.point.totalMiles))
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .foregroundStyle(.white)
+                                .background(.black.opacity(0.18), in: Capsule())
+                                .shadow(radius: 1)
                         }
                     }
                     .chartYScale(domain: domain)

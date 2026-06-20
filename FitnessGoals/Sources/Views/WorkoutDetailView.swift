@@ -17,6 +17,7 @@ struct WorkoutDetailView: View {
     @State private var loadingRoute = true
     @State private var selectedDistance: Double? = nil
     @State private var routeAnimationID = 0
+    @State private var routeAnimationSpeed: RouteAnimationSpeed = .fast
 
     private var workout: Workout? { vm.workout(for: workoutID) }
     private var isExcluded: Bool { vm.excludedWorkoutIDs.contains(workoutID) }
@@ -33,7 +34,8 @@ struct WorkoutDetailView: View {
 
     private var animationDuration: TimeInterval {
         guard let duration = workout?.duration else { return 8 }
-        return min(max(duration / 180, 6), 14)
+        let baseDuration = min(max(duration / 240, 4), 10)
+        return baseDuration / routeAnimationSpeed.multiplier
     }
 
     var body: some View {
@@ -101,7 +103,7 @@ struct WorkoutDetailView: View {
     @ViewBuilder
     private var mapHeader: some View {
         if routeData.coordinates.count > 1 {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .bottom) {
                 RouteMapView(
                     coordinates: routeData.coordinates,
                     splitCoordinates: highlightCoords,
@@ -109,16 +111,30 @@ struct WorkoutDetailView: View {
                     animationDuration: animationDuration
                 )
 
-                Button {
-                    routeAnimationID += 1
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .frame(width: 42, height: 42)
-                        .background(.ultraThinMaterial, in: Circle())
+                HStack(spacing: 10) {
+                    Picker("Route speed", selection: $routeAnimationSpeed) {
+                        ForEach(RouteAnimationSpeed.allCases) { speed in
+                            Text(speed.label).tag(speed)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 176)
+                    .onChange(of: routeAnimationSpeed) { _, _ in
+                        routeAnimationID += 1
+                    }
+
+                    Button {
+                        routeAnimationID += 1
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .frame(width: 42, height: 42)
+                    }
+                    .accessibilityLabel("Replay route animation")
                 }
-                .accessibilityLabel("Replay route animation")
+                .padding(8)
+                .background(.ultraThinMaterial, in: Capsule())
                 .padding(16)
             }
         } else if loadingRoute {
@@ -167,6 +183,30 @@ struct WorkoutDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+}
+
+private enum RouteAnimationSpeed: String, CaseIterable, Identifiable {
+    case normal
+    case fast
+    case fastest
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .normal: "1x"
+        case .fast: "2x"
+        case .fastest: "4x"
+        }
+    }
+
+    var multiplier: Double {
+        switch self {
+        case .normal: 1
+        case .fast: 2
+        case .fastest: 4
         }
     }
 }

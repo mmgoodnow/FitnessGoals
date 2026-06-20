@@ -82,55 +82,60 @@ struct PaceAnalysisView: View {
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                 } else {
-                    Chart(chartData, id: \.point.id) { item in
-                        let isCurrent = item.point.year == Calendar.current.component(.year, from: Date())
-                        let barColor = selectedZone?.color ?? .blue
+                    VStack(spacing: 8) {
+                        Chart(chartData, id: \.point.id) { item in
+                            let isCurrent = item.point.year == Calendar.current.component(.year, from: Date())
+                            let barColor = selectedZone?.color ?? .blue
 
-                        BarMark(
-                            x: .value("Year", String(item.point.year)),
-                            y: .value("Min/mi", item.yVal),
-                            width: .ratio(0.5)
-                        )
-                        .foregroundStyle(
-                            isCurrent
-                                ? AnyShapeStyle(LinearGradient(
-                                    colors: [barColor.opacity(0.7), barColor],
-                                    startPoint: .bottom, endPoint: .top))
-                                : AnyShapeStyle(barColor.opacity(0.3))
-                        )
-                        .cornerRadius(6)
-                        .annotation(position: .top) {
-                            let pos = -item.yVal
-                            let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                            Text(String(format: "%d:%02d", m, s))
-                                .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            BarMark(
+                                x: .value("Year", String(item.point.year)),
+                                y: .value("Min/mi", item.yVal),
+                                width: .ratio(0.5)
+                            )
+                            .foregroundStyle(
+                                isCurrent
+                                    ? AnyShapeStyle(LinearGradient(
+                                        colors: [barColor.opacity(0.7), barColor],
+                                        startPoint: .bottom, endPoint: .top))
+                                    : AnyShapeStyle(barColor.opacity(0.3))
+                            )
+                            .cornerRadius(6)
+                            .annotation(position: .top) {
+                                let pos = -item.yVal
+                                let m = Int(pos); let s = Int((pos - Double(m)) * 60)
+                                Text(String(format: "%d:%02d", m, s))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        .annotation(position: .overlay, alignment: .center) {
-                            Text(formatMiles(item.point.totalMiles))
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .foregroundStyle(.white)
-                                .background(.black.opacity(0.18), in: Capsule())
-                                .shadow(radius: 1)
-                        }
-                    }
-                    .chartYScale(domain: domain)
-                    .chartYAxis {
-                        AxisMarks(position: .trailing) { val in
-                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            AxisValueLabel {
-                                if let v = val.as(Double.self) {
-                                    let pos = -v
-                                    let m = Int(pos); let s = Int((pos - Double(m)) * 60)
-                                    Text(String(format: "%d:%02d", m, s)).font(.caption2)
+                        .chartYScale(domain: domain)
+                        .chartYAxis {
+                            AxisMarks(position: .trailing) { val in
+                                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                                AxisValueLabel {
+                                    if let v = val.as(Double.self) {
+                                        let pos = -v
+                                        let m = Int(pos); let s = Int((pos - Double(m)) * 60)
+                                        Text(String(format: "%d:%02d", m, s)).font(.caption2)
+                                    }
                                 }
                             }
                         }
+                        .frame(height: 180).clipped()
+
+                        HStack(spacing: 6) {
+                            ForEach(chartData, id: \.point.id) { item in
+                                Text("\(item.point.year) · \(formatMiles(item.point.totalMiles))")
+                                    .font(.caption2.weight(.medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 4)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+                            }
+                        }
                     }
-                    
-                    .frame(height: 200).clipped()
                 }
             }
         }

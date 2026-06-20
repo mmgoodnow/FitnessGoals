@@ -44,6 +44,10 @@ struct PaceAnalysisView: View {
         return (mn - pad) ... (mx + pad)
     }
 
+    private var maxSampleMiles: Double {
+        chartData.map { $0.point.totalMiles }.max() ?? 0
+    }
+
     var body: some View {
         CardView(title: "Year-over-Year Pace",
                  systemImage: "chart.bar.xaxis",
@@ -86,6 +90,7 @@ struct PaceAnalysisView: View {
                         Chart(chartData, id: \.point.id) { item in
                             let isCurrent = item.point.year == Calendar.current.component(.year, from: Date())
                             let barColor = selectedZone?.color ?? .blue
+                            let opacity = sampleOpacity(for: item.point.totalMiles)
 
                             BarMark(
                                 x: .value("Year", String(item.point.year)),
@@ -95,9 +100,9 @@ struct PaceAnalysisView: View {
                             .foregroundStyle(
                                 isCurrent
                                     ? AnyShapeStyle(LinearGradient(
-                                        colors: [barColor.opacity(0.7), barColor],
+                                        colors: [barColor.opacity(opacity * 0.7), barColor.opacity(opacity)],
                                         startPoint: .bottom, endPoint: .top))
-                                    : AnyShapeStyle(barColor.opacity(0.3))
+                                    : AnyShapeStyle(barColor.opacity(opacity))
                             )
                             .cornerRadius(6)
                             .annotation(position: .top) {
@@ -123,18 +128,9 @@ struct PaceAnalysisView: View {
                         }
                         .frame(height: 180).clipped()
 
-                        HStack(spacing: 6) {
-                            ForEach(chartData, id: \.point.id) { item in
-                                Text("\(item.point.year) · \(formatMiles(item.point.totalMiles))")
-                                    .font(.caption2.weight(.medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 4)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
-                            }
-                        }
+                        Text("Darker bars are based on more miles.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
@@ -153,11 +149,9 @@ struct PaceAnalysisView: View {
         }
     }
 
-    private func formatMiles(_ miles: Double) -> String {
-        if miles >= 10 {
-            return "\(Int(miles.rounded())) mi"
-        }
-        return String(format: "%.1f mi", miles)
+    private func sampleOpacity(for miles: Double) -> Double {
+        guard maxSampleMiles > 0 else { return 0.35 }
+        return 0.25 + 0.75 * min(max(miles / maxSampleMiles, 0), 1)
     }
 }
 

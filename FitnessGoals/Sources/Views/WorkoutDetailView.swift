@@ -16,6 +16,7 @@ struct WorkoutDetailView: View {
     @State private var routeData: HealthKitService.FullRouteData = .init(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:])
     @State private var loadingRoute = true
     @State private var selectedDistance: Double? = nil
+    @State private var routeAnimationID = 0
 
     private var workout: Workout? { vm.workout(for: workoutID) }
     private var isExcluded: Bool { vm.excludedWorkoutIDs.contains(workoutID) }
@@ -28,6 +29,11 @@ struct WorkoutDetailView: View {
     private var highlightCoords: [CLLocationCoordinate2D] {
         guard let d = selectedDistance else { return [] }
         return routeData.segmentsByDistance[d] ?? []
+    }
+
+    private var animationDuration: TimeInterval {
+        guard let duration = workout?.duration else { return 8 }
+        return min(max(duration / 180, 6), 14)
     }
 
     var body: some View {
@@ -95,7 +101,26 @@ struct WorkoutDetailView: View {
     @ViewBuilder
     private var mapHeader: some View {
         if routeData.coordinates.count > 1 {
-            RouteMapView(coordinates: routeData.coordinates, splitCoordinates: highlightCoords)
+            ZStack(alignment: .bottomTrailing) {
+                RouteMapView(
+                    coordinates: routeData.coordinates,
+                    splitCoordinates: highlightCoords,
+                    animationID: routeAnimationID,
+                    animationDuration: animationDuration
+                )
+
+                Button {
+                    routeAnimationID += 1
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(width: 42, height: 42)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .accessibilityLabel("Replay route animation")
+                .padding(16)
+            }
         } else if loadingRoute {
             Rectangle()
                 .fill(Color.secondary.opacity(0.1))
@@ -150,13 +175,15 @@ struct WorkoutDetailView: View {
 
 // Tag polylines so the renderer knows which color to use
 private class TaggedPolyline: MKPolyline {
-    enum Kind { case full, split }
+    enum Kind { case full, animated, split }
     var kind: Kind = .full
 }
 
 struct RouteMapView: UIViewRepresentable {
     let coordinates: [CLLocationCoordinate2D]
     let splitCoordinates: [CLLocationCoordinate2D]
+    let animationID: Int
+    let animationDuration: TimeInterval
 
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
@@ -171,8 +198,11 @@ struct RouteMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ map: MKMapView, context: Context) {
-        map.removeOverlays(map.overlays)
-        map.removeAnnotations(map.annotations)
+        map.removeOverlays(map.overlays.filter { overlay in
+            guard let tagged = overlay as? TaggedPolyline else { return true }
+            return tagged.kind != .animated
+        })
+        map.removeAnnotations(map.annotations.filter { $0.title != "Current Position" })
         guard coordinates.count > 1 else { return }
 
         // Full route — faded
@@ -211,23 +241,126 @@ struct RouteMapView: UIViewRepresentable {
             }
             map.setVisibleMapRect(fitRect, edgePadding: UIEdgeInsets(top: 48, left: 48, bottom: 48, right: 48), animated: true)
         }
+
+        context.coordinator.startRouteAnimation(
+            on: map,
+            coordinates: coordinates,
+            animationID: animationID,
+            duration: animationDuration
+        )
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     class Coordinator: NSObject, MKMapViewDelegate {
         var lastFitKey: String?
+        private var displayLink: CADisplayLink?
+        private var animationID: Int?
+        private var animationStartedAt: CFTimeInterval = 0
+        private var animationDuration: TimeInterval = 8
+        private var routeCoordinates: [CLLocationCoordinate2D] = []
+        private weak var mapView: MKMapView?
+        private var animatedOverlay: TaggedPolyline?
+        private var currentAnnotation: MKPointAnnotation?
+
+        deinit {
+            displayLink?.invalidate()
+        }
+
+        func startRouteAnimation(
+            on map: MKMapView,
+            coordinates: [CLLocationCoordinate2D],
+            animationID: Int,
+            duration: TimeInterval
+        ) {
+            let sameRoute = routeCoordinates.count == coordinates.count
+                && routeCoordinates.first?.latitude == coordinates.first?.latitude
+                && routeCoordinates.first?.longitude == coordinates.first?.longitude
+                && routeCoordinates.last?.latitude == coordinates.last?.latitude
+                && routeCoordinates.last?.longitude == coordinates.last?.longitude
+
+            guard !sameRoute || self.animationID != animationID else { return }
+
+            displayLink?.invalidate()
+            removeAnimatedRoute()
+
+            self.mapView = map
+            self.routeCoordinates = coordinates
+            self.animationID = animationID
+            self.animationDuration = max(duration, 1)
+            self.animationStartedAt = CACurrentMediaTime()
+
+            let marker = MKPointAnnotation()
+            marker.coordinate = coordinates[0]
+            marker.title = "Current Position"
+            currentAnnotation = marker
+            map.addAnnotation(marker)
+
+            renderAnimatedRoute(progress: 0)
+
+            let link = CADisplayLink(target: self, selector: #selector(animationStep(_:)))
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 20, maximum: 30, preferred: 30)
+            link.add(to: .main, forMode: .common)
+            displayLink = link
+        }
+
+        @objc private func animationStep(_ link: CADisplayLink) {
+            let elapsed = CACurrentMediaTime() - animationStartedAt
+            let progress = min(max(elapsed / animationDuration, 0), 1)
+            renderAnimatedRoute(progress: progress)
+
+            if progress >= 1 {
+                link.invalidate()
+                displayLink = nil
+            }
+        }
+
+        private func renderAnimatedRoute(progress: Double) {
+            guard let mapView, routeCoordinates.count > 1 else { return }
+
+            if let animatedOverlay {
+                mapView.removeOverlay(animatedOverlay)
+            }
+
+            let lastIndex = max(1, min(routeCoordinates.count - 1, Int(Double(routeCoordinates.count - 1) * progress)))
+            let visibleCoordinates = Array(routeCoordinates.prefix(lastIndex + 1))
+            let line = TaggedPolyline(coordinates: visibleCoordinates, count: visibleCoordinates.count)
+            line.kind = .animated
+            animatedOverlay = line
+            mapView.addOverlay(line, level: .aboveRoads)
+
+            currentAnnotation?.coordinate = routeCoordinates[lastIndex]
+        }
+
+        private func removeAnimatedRoute() {
+            guard let mapView else { return }
+            if let animatedOverlay {
+                mapView.removeOverlay(animatedOverlay)
+            }
+            if let currentAnnotation {
+                mapView.removeAnnotation(currentAnnotation)
+            }
+            animatedOverlay = nil
+            currentAnnotation = nil
+        }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             guard let polyline = overlay as? TaggedPolyline else { return MKOverlayRenderer(overlay: overlay) }
             let r = MKPolylineRenderer(polyline: polyline)
             switch polyline.kind {
             case .full:
-                r.strokeColor = UIColor.systemBlue.withAlphaComponent(0.8)
+                r.strokeColor = UIColor.systemBlue.withAlphaComponent(0.28)
                 r.lineWidth = 3
+            case .animated:
+                r.strokeColor = UIColor.systemOrange
+                r.lineWidth = 5
+                r.lineCap = .round
+                r.lineJoin = .round
             case .split:
                 r.strokeColor = UIColor.systemYellow
                 r.lineWidth = 5
+                r.lineCap = .round
+                r.lineJoin = .round
             }
             return r
         }
@@ -240,6 +373,8 @@ struct RouteMapView: UIViewRepresentable {
                 view.image = Self.dotImage(color: .systemGreen)
             case "Split End":
                 view.image = Self.dotImage(color: .black, checkered: true)
+            case "Current Position":
+                view.image = Self.dotImage(color: .systemOrange)
             default:
                 view.image = Self.dotImage(color: .systemBlue)
             }

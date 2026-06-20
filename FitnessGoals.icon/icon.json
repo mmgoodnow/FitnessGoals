@@ -12,24 +12,10 @@
         },
         {
           "fill" : {
-            "solid" : "srgb:0.18431,0.43529,0.83922,1.00000"
-          },
-          "image-name" : "trend-line.svg",
-          "name" : "Trend Line"
-        },
-        {
-          "fill" : {
             "solid" : "srgb:0.12157,0.16471,0.26667,1.00000"
           },
           "image-name" : "runner-body.svg",
-          "name" : "Runner Body"
-        },
-        {
-          "fill" : {
-            "solid" : "srgb:0.94510,0.35294,0.25882,1.00000"
-          },
-          "image-name" : "runner-stride.svg",
-          "name" : "Runner Stride"
+          "name" : "Runner"
         }
       ],
       "shadow" : {

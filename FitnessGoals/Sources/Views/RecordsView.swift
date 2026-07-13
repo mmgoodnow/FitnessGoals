@@ -2,15 +2,16 @@ import SwiftUI
 
 struct RecordsView: View {
     @EnvironmentObject var vm: DashboardViewModel
+    @State private var selectedDistanceID: String = "5k"
 
     var body: some View {
         ZStack {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    BestEffortsView()
+                    BestEffortsView(selectedDistanceID: $selectedDistanceID)
                         .padding(.horizontal)
-                    RecentWorkoutsView()
+                    TopEventEffortsView(selectedDistanceID: selectedDistanceID)
                         .padding(.horizontal)
                 }
                 .padding(.vertical, 12)

@@ -3,7 +3,7 @@ import Charts
 
 struct BestEffortsView: View {
     @EnvironmentObject var vm: DashboardViewModel
-    @State private var selectedDistanceID: String = "5k"
+    @Binding var selectedDistanceID: String
     @State private var tappedPoint: DashboardViewModel.BestEffortPoint? = nil
 
     private var efforts: [DashboardViewModel.BestEffort] {

@@ -201,6 +201,11 @@ class HealthKitService: ObservableObject {
             guard distanceMeters > 0 else { return nil }
             return duration / distanceMeters
         }
+
+        var paceSecondsPerMile: Double? {
+            guard let paceSecondsPerMeter else { return nil }
+            return paceSecondsPerMeter * 1609.344
+        }
     }
 
     /// Fetches the route once and computes split times + highlight segments for every

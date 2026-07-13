@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import Charts
 
 /// Wraps a workout UUID so it can drive a `.sheet(item:)` presentation.
 struct WorkoutDetailTarget: Identifiable {
@@ -46,18 +47,6 @@ struct WorkoutDetailView: View {
                 .ignoresSafeArea(edges: .top)
 
             List {
-                    if !routeData.runSplits.isEmpty {
-                        Section {
-                            ForEach(routeData.runSplits) { split in
-                                runSplitRow(split)
-                            }
-                        } header: {
-                            Text("Splits")
-                        } footer: {
-                            Text("Mile splits are calculated from the recorded route.")
-                        }
-                    }
-
                     if !splitRows.isEmpty {
                         Section {
                             ForEach(splitRows) { dist in
@@ -67,6 +56,16 @@ struct WorkoutDetailView: View {
                             Text("Best Efforts")
                         } footer: {
                             Text("Tap a distance to highlight its fastest segment on the map.")
+                        }
+                    }
+
+                    if !routeData.runSplits.isEmpty {
+                        Section {
+                            splitsChart
+                        } header: {
+                            Text("Splits")
+                        } footer: {
+                            Text("Mile splits are calculated from the recorded route.")
                         }
                     }
 
@@ -199,28 +198,50 @@ struct WorkoutDetailView: View {
         }
     }
 
-    private func runSplitRow(_ split: HealthKitService.RouteSplit) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(splitLabel(split))
-                    .foregroundStyle(.primary)
-                Text("Elapsed \(Formatters.formatDuration(split.elapsedTime))")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(Formatters.formatDuration(split.duration))
-                    .font(.system(.body, design: .monospaced).weight(.semibold))
-                if let pace = split.paceSecondsPerMeter {
-                    Text(Formatters.formatPace(pace))
-                        .font(.caption)
+    private var splitsChart: some View {
+        Chart(routeData.runSplits) { split in
+            BarMark(
+                x: .value("Pace", split.paceSecondsPerMile ?? 0),
+                y: .value("Split", splitLabel(split)),
+                height: .ratio(0.68)
+            )
+            .foregroundStyle(split.isPartial ? Color.yellow.opacity(0.55) : Color.yellow)
+            .annotation(position: .trailing, alignment: .leading) {
+                VStack(alignment: .leading, spacing: 1) {
+                    if let pace = split.paceSecondsPerMeter {
+                        Text(Formatters.formatPace(pace))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    Text(Formatters.formatDuration(split.duration))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
             }
         }
+        .chartXAxis {
+            AxisMarks(position: .bottom) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                AxisValueLabel {
+                    if let pace = value.as(Double.self) {
+                        Text(formatPaceSecondsPerMile(pace))
+                            .font(.caption2)
+                    }
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisValueLabel {
+                    if let label = value.as(String.self) {
+                        Text(label)
+                            .font(.caption2)
+                    }
+                }
+            }
+        }
+        .frame(height: max(140, CGFloat(routeData.runSplits.count) * 34))
+        .padding(.vertical, 4)
     }
 
     private func splitLabel(_ split: HealthKitService.RouteSplit) -> String {
@@ -228,6 +249,12 @@ struct WorkoutDetailView: View {
             return String(format: "Last %.2f mi", Formatters.miles(split.distanceMeters))
         }
         return "Mile \(split.index)"
+    }
+
+    private func formatPaceSecondsPerMile(_ secondsPerMile: Double) -> String {
+        let minutes = Int(secondsPerMile) / 60
+        let seconds = Int(secondsPerMile) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 

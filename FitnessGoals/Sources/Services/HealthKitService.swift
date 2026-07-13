@@ -185,6 +185,22 @@ class HealthKitService: ObservableObject {
         let segmentsByDistance: [Double: [CLLocationCoordinate2D]]
         // [distanceMeters: split seconds]
         let splitsByDistance: [Double: TimeInterval]
+        let runSplits: [RouteSplit]
+    }
+
+    struct RouteSplit: Identifiable {
+        let index: Int
+        let distanceMeters: Double
+        let elapsedTime: TimeInterval
+        let duration: TimeInterval
+        let isPartial: Bool
+
+        var id: Int { index }
+
+        var paceSecondsPerMeter: Double? {
+            guard distanceMeters > 0 else { return nil }
+            return duration / distanceMeters
+        }
     }
 
     /// Fetches the route once and computes split times + highlight segments for every
@@ -193,15 +209,16 @@ class HealthKitService: ObservableObject {
         let locations = (try? await fetchFilteredLocations(for: hkWorkout)) ?? []
         let coords = locations.map { $0.coordinate }
         guard locations.count >= 2 else {
-            return FullRouteData(coordinates: coords, segmentsByDistance: [:], splitsByDistance: [:])
+            return FullRouteData(coordinates: coords, segmentsByDistance: [:], splitsByDistance: [:], runSplits: [])
         }
         let splits = bestSplits(locations: locations, distances: distances)
+        let runSplits = mileSplits(locations: locations)
         var segments: [Double: [CLLocationCoordinate2D]] = [:]
         for dist in distances where splits[dist] != nil {
             let segment = bestSplitSegment(locations: locations, distance: dist)
             if segment.count > 1 { segments[dist] = segment.map { $0.coordinate } }
         }
-        return FullRouteData(coordinates: coords, segmentsByDistance: segments, splitsByDistance: splits)
+        return FullRouteData(coordinates: coords, segmentsByDistance: segments, splitsByDistance: splits, runSplits: runSplits)
     }
 
     /// Returns best split time (seconds) for each requested distance (meters),
@@ -309,5 +326,80 @@ class HealthKitService: ObservableObject {
         }
         guard bestTime < .infinity, bestRight > bestLeft else { return [] }
         return Array(locations[bestLeft ... bestRight])
+    }
+
+    private func mileSplits(locations: [CLLocation]) -> [RouteSplit] {
+        let splitDistance = 1609.344
+        let minimumPartialDistance = splitDistance * 0.25
+        let cumulative = cumulativeDistances(for: locations)
+        guard let totalDistance = cumulative.last, totalDistance >= minimumPartialDistance else { return [] }
+
+        var splits: [RouteSplit] = []
+        var previousDistance = 0.0
+        var previousTime = locations[0].timestamp
+        var nextBoundary = splitDistance
+
+        while nextBoundary <= totalDistance {
+            guard let boundaryTime = interpolatedTime(at: nextBoundary, locations: locations, cumulativeDistances: cumulative) else {
+                break
+            }
+
+            splits.append(RouteSplit(
+                index: splits.count + 1,
+                distanceMeters: nextBoundary - previousDistance,
+                elapsedTime: boundaryTime.timeIntervalSince(locations[0].timestamp),
+                duration: boundaryTime.timeIntervalSince(previousTime),
+                isPartial: false
+            ))
+
+            previousDistance = nextBoundary
+            previousTime = boundaryTime
+            nextBoundary += splitDistance
+        }
+
+        let remainingDistance = totalDistance - previousDistance
+        if remainingDistance >= minimumPartialDistance,
+           let finishTime = locations.last?.timestamp {
+            splits.append(RouteSplit(
+                index: splits.count + 1,
+                distanceMeters: remainingDistance,
+                elapsedTime: finishTime.timeIntervalSince(locations[0].timestamp),
+                duration: finishTime.timeIntervalSince(previousTime),
+                isPartial: true
+            ))
+        }
+
+        return splits
+    }
+
+    private func cumulativeDistances(for locations: [CLLocation]) -> [Double] {
+        var cumulative = [Double](repeating: 0, count: locations.count)
+        for index in 1 ..< locations.count {
+            cumulative[index] = cumulative[index - 1] + locations[index].distance(from: locations[index - 1])
+        }
+        return cumulative
+    }
+
+    private func interpolatedTime(
+        at distance: Double,
+        locations: [CLLocation],
+        cumulativeDistances: [Double]
+    ) -> Date? {
+        guard locations.count == cumulativeDistances.count,
+              let totalDistance = cumulativeDistances.last,
+              distance <= totalDistance else {
+            return nil
+        }
+
+        for index in 1 ..< cumulativeDistances.count where cumulativeDistances[index] >= distance {
+            let previousDistance = cumulativeDistances[index - 1]
+            let segmentDistance = cumulativeDistances[index] - previousDistance
+            let fraction = segmentDistance > 0 ? (distance - previousDistance) / segmentDistance : 0
+            let previousTime = locations[index - 1].timestamp
+            let segmentTime = locations[index].timestamp.timeIntervalSince(previousTime)
+            return previousTime.addingTimeInterval(segmentTime * fraction)
+        }
+
+        return locations.last?.timestamp
     }
 }

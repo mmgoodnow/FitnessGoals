@@ -410,7 +410,7 @@ static let bestEffortDistances: [BestEffortDistance] = [
     func fetchFullRouteData(for workoutID: UUID) async -> HealthKitService.FullRouteData {
         let hkWorkouts = await fetchAllRunningHKWorkouts()
         guard let hk = hkWorkouts.first(where: { $0.uuid == workoutID }) else {
-            return HealthKitService.FullRouteData(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:])
+            return HealthKitService.FullRouteData(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:], runSplits: [])
         }
         let distances = Self.bestEffortDistances.map { $0.meters }
         return await healthKit.fetchFullRouteData(for: hk, distances: distances)

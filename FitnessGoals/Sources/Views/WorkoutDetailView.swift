@@ -13,7 +13,7 @@ struct WorkoutDetailView: View {
 
     let workoutID: UUID
 
-    @State private var routeData: HealthKitService.FullRouteData = .init(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:])
+    @State private var routeData: HealthKitService.FullRouteData = .init(coordinates: [], segmentsByDistance: [:], splitsByDistance: [:], runSplits: [])
     @State private var loadingRoute = true
     @State private var selectedDistance: Double? = nil
     @State private var routeAnimationID = 0
@@ -46,6 +46,18 @@ struct WorkoutDetailView: View {
                 .ignoresSafeArea(edges: .top)
 
             List {
+                    if !routeData.runSplits.isEmpty {
+                        Section {
+                            ForEach(routeData.runSplits) { split in
+                                runSplitRow(split)
+                            }
+                        } header: {
+                            Text("Splits")
+                        } footer: {
+                            Text("Mile splits are calculated from the recorded route.")
+                        }
+                    }
+
                     if !splitRows.isEmpty {
                         Section {
                             ForEach(splitRows) { dist in
@@ -185,6 +197,37 @@ struct WorkoutDetailView: View {
                 }
             }
         }
+    }
+
+    private func runSplitRow(_ split: HealthKitService.RouteSplit) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(splitLabel(split))
+                    .foregroundStyle(.primary)
+                Text("Elapsed \(Formatters.formatDuration(split.elapsedTime))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(Formatters.formatDuration(split.duration))
+                    .font(.system(.body, design: .monospaced).weight(.semibold))
+                if let pace = split.paceSecondsPerMeter {
+                    Text(Formatters.formatPace(pace))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func splitLabel(_ split: HealthKitService.RouteSplit) -> String {
+        if split.isPartial {
+            return String(format: "Last %.2f mi", Formatters.miles(split.distanceMeters))
+        }
+        return "Mile \(split.index)"
     }
 }
 

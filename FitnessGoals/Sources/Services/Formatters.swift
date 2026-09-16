@@ -30,8 +30,14 @@ enum Formatters {
         Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1
     }
 
-    static func weekOfYear(_ date: Date) -> Int {
-        Calendar.current.component(.weekOfYear, from: date)
+    static var weekCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        return calendar
+    }
+
+    static func startOfWeek(_ date: Date) -> Date {
+        weekCalendar.dateInterval(of: .weekOfYear, for: date)!.start
     }
 
     static func weekdayIndex(_ date: Date) -> Int {

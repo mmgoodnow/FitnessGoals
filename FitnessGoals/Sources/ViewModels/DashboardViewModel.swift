@@ -147,19 +147,40 @@ var weeklyAverageMiles: Double {
 
     // MARK: - Weekly chart data
 
+    func weeklyDistanceTotals(asOf now: Date) -> (current: Double, previous: Double, rolling: Double) {
+        let calendar = Formatters.weekCalendar
+        let weekStart = Formatters.startOfWeek(now)
+        let previousWeekStart = calendar.date(byAdding: .day, value: -7, to: weekStart)!
+        let rollingStart = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: now))!
+        // Include December workouts when a window crosses New Year's Day.
+        let allWorkouts = workouts + historicalWorkouts.values.flatMap { $0 }
+        var current = 0.0
+        var previous = 0.0
+        var rolling = 0.0
+        for workout in allWorkouts where workout.startDate <= now {
+            let miles = Formatters.miles(workout.distance)
+            if workout.startDate >= weekStart { current += miles }
+            if workout.startDate >= previousWeekStart && workout.startDate < weekStart {
+                previous += miles
+            }
+            if workout.startDate >= rollingStart { rolling += miles }
+        }
+        return (current, previous, rolling)
+    }
+
     struct WeekPoint: Identifiable {
-        let id: Int
-        let week: Int
+        var id: Date { week }
+        let week: Date
         let miles: Double
     }
 
     var weeklyData: [WeekPoint] {
-        var byWeek: [Int: Double] = [:]
+        var byWeek: [Date: Double] = [:]
         for w in workouts {
-            let week = Formatters.weekOfYear(w.startDate)
+            let week = Formatters.startOfWeek(w.startDate)
             byWeek[week, default: 0] += Formatters.miles(w.distance)
         }
-        return byWeek.map { WeekPoint(id: $0.key, week: $0.key, miles: $0.value) }
+        return byWeek.map { WeekPoint(week: $0.key, miles: $0.value) }
             .sorted { $0.week < $1.week }
     }
 

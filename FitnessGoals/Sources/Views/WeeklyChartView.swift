@@ -6,6 +6,14 @@ struct WeeklyChartView: View {
 
     var body: some View {
         CardView(title: "Weekly Distance", systemImage: "calendar.badge.clock", accentColor: .indigo) {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let totals = vm.weeklyDistanceTotals(asOf: context.date)
+                HStack(spacing: 16) {
+                    distanceSummary("This week", miles: totals.current)
+                    distanceSummary("Last week", miles: totals.previous)
+                    distanceSummary("Last 7 days", miles: totals.rolling)
+                }
+            }
             Chart(vm.weeklyData) { point in
                 BarMark(
                     x: .value("Week", point.week),
@@ -19,13 +27,14 @@ struct WeeklyChartView: View {
                 .cornerRadius(3)
             }
             .chartScrollableAxes([]).chartGesture { _ in DragGesture(minimumDistance: .infinity) }
-            .chartXScale(domain: 1 ... 52)
+            .chartXScale(domain: chartDateRange)
             .chartXAxis {
-                AxisMarks(values: [1, 13, 26, 39, 52]) { val in
+                AxisMarks(values: .stride(by: .month, count: 3)) { val in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     AxisValueLabel {
-                        let map = [1: "Jan", 13: "Apr", 26: "Jul", 39: "Oct", 52: "Dec"]
-                        Text(map[val.as(Int.self) ?? 0] ?? "").font(.caption2)
+                        if let date = val.as(Date.self) {
+                            Text(date, format: .dateTime.month(.abbreviated)).font(.caption2)
+                        }
                     }
                 }
             }
@@ -37,5 +46,24 @@ struct WeeklyChartView: View {
             }
             .frame(height: 150).clipped()
         }
+    }
+
+    private var chartDateRange: ClosedRange<Date> {
+        let year = Formatters.weekCalendar.dateInterval(of: .year, for: Date())!
+        return Formatters.startOfWeek(year.start)...year.end
+    }
+
+    private func distanceSummary(_ title: String, miles: Double) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(String(format: "%.1f mi", miles))
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

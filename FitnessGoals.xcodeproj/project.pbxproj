@@ -32,6 +32,7 @@
 		A026 /* BestEffortCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F026 /* BestEffortCache.swift */; };
 		A027 /* WorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F027 /* WorkoutDetailView.swift */; };
 		A028 /* TopEventEffortsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F028 /* TopEventEffortsView.swift */; };
+		A029 /* ActivityCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F029 /* ActivityCalendarView.swift */; };
 		AICON /* FitnessGoals.icon in Resources */ = {isa = PBXBuildFile; fileRef = FICON /* FitnessGoals.icon */; };
 /* End PBXBuildFile section */
 
@@ -60,6 +61,7 @@
 		F027 /* WorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDetailView.swift; sourceTree = "<group>"; };
 		F026 /* BestEffortCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestEffortCache.swift; sourceTree = "<group>"; };
 		F028 /* TopEventEffortsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopEventEffortsView.swift; sourceTree = "<group>"; };
+		F029 /* ActivityCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCalendarView.swift; sourceTree = "<group>"; };
 		F019 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		FAPP /* FitnessGoals.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessGoals.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FENTITLE /* FitnessGoals.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FitnessGoals.entitlements; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 				F023 /* SettingsView.swift */,
 				F024 /* BestEffortsView.swift */,
 				F028 /* TopEventEffortsView.swift */,
+				F029 /* ActivityCalendarView.swift */,
 				F025 /* RecordsView.swift */,
 				F027 /* WorkoutDetailView.swift */,
 			);
@@ -276,6 +279,7 @@
 				A023 /* SettingsView.swift in Sources */,
 				A024 /* BestEffortsView.swift in Sources */,
 				A028 /* TopEventEffortsView.swift in Sources */,
+				A029 /* ActivityCalendarView.swift in Sources */,
 				A025 /* RecordsView.swift in Sources */,
 				A026 /* BestEffortCache.swift in Sources */,
 				A027 /* WorkoutDetailView.swift in Sources */,

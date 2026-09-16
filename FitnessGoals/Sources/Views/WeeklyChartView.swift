@@ -14,6 +14,8 @@ struct WeeklyChartView: View {
                     distanceSummary("Last 7 days", miles: totals.rolling)
                 }
             }
+            ActivityCalendarView()
+            Divider()
             Chart(vm.weeklyData) { point in
                 BarMark(
                     x: .value("Week", point.week),

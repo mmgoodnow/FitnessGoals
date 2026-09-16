@@ -147,6 +147,32 @@ var weeklyAverageMiles: Double {
 
     // MARK: - Weekly chart data
 
+    struct ActivityDay: Identifiable {
+        var id: Date { date }
+        let date: Date
+        let miles: Double
+        let isToday: Bool
+        let isFuture: Bool
+    }
+
+    func recentActivityDays(asOf now: Date) -> [ActivityDay] {
+        let calendar = Formatters.weekCalendar
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -14, to: Formatters.startOfWeek(now))!
+        var milesByDay: [Date: Double] = [:]
+        for workout in workouts + historicalWorkouts.values.flatMap({ $0 })
+            where workout.startDate >= start && workout.startDate <= now {
+            let day = calendar.startOfDay(for: workout.startDate)
+            milesByDay[day, default: 0] += Formatters.miles(workout.distance)
+        }
+        // Calendar arithmetic preserves local dates across daylight saving changes.
+        return (0..<21).map { offset in
+            let date = calendar.date(byAdding: .day, value: offset, to: start)!
+            return ActivityDay(date: date, miles: milesByDay[date, default: 0],
+                               isToday: date == today, isFuture: date > today)
+        }
+    }
+
     func weeklyDistanceTotals(asOf now: Date) -> (current: Double, previous: Double, rolling: Double) {
         let calendar = Formatters.weekCalendar
         let weekStart = Formatters.startOfWeek(now)
